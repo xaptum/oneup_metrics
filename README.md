@@ -1,6 +1,6 @@
 # oneup_metrics
 
-###High performance metrics app in Erlang 
+### High performance metrics app in Erlang 
 
 Usable as is, but still largely UNDER CONSTRUCTION.  
 
@@ -17,11 +17,13 @@ Also, only a subset of metrics relevant to the process should be passed to it fo
 
 Then the process ends up with this metrics map subset in it's process dictionary, and that's how the process will be able to update global metrics during its lifetime.
  
-##Usage:
+## Usage:
 
-First of all, see common tests for usage examples.
+First of all, see eunit and common tests for usage examples.  To run:
 
-STEP 1. 
+>make test
+
+### STEP 1. 
 `sys.config` is expecting `metrics_config` app variable which is a list of metric names. 
 Eventually it will be a list of metric names with metric types, but currently only counters are supported. 
 
@@ -44,7 +46,7 @@ Metric name is a list of atoms, i.e. `[total, tcp, requests]`
 
 `oneup_metrics` app comes with sample `sys.config` which might change format in the future once different metric types, like meters and histograms are added.
 
-STEP 2. 
+### STEP 2. 
 In your top-level supervisor, app module, or any other process that will be running along your app or spawned very infrequently, get the global MetricsMap (should be initialized when oneup_metrics app is initialize):
 
 ```MetricsMap = oneup_metrics:initial_get_config()```
@@ -62,6 +64,7 @@ Pass the MetricsMap to any child processes that are spawned very frequently:
 spawn(tcp_request, handle, [Request, MetricsMap])
 ```
 
+### STEP 3. 
 Inside the process that will be updating metrics call  `oneup_metrics:enable(MetricsMap)`
 ```
 -module(tcp_request).
@@ -81,16 +84,18 @@ process_request(Request).
 
 
 
-##BUILT-IN Local HTTP Reporters
+## BUILT-IN Local HTTP Reporters
 
-Enabled when `http_port` app var is defined. 
+**Enabled only if `http_port` app var is defined!** 
 
 ### Http reporter for metrics_config
   
-If it is, metrics are accessible from `localhost:HttpPort/[prefix]` where prefix is any prefix defined in your `metrics_config`, i.e.
-####Example 1. 
-`curl -s localhost:3339/a`
-returns:
+Metrics are accessible from `localhost:HttpPort/[prefix]` where prefix is any prefix defined in your `metrics_config`, i.e.
+
+#### Example 1. Get subset of configured metrics
+
+>curl -s localhost:3339/a
+
 ```
 b.c1.d1.ref1: 0
 b.c1.d2.ref2: 0
@@ -98,22 +103,22 @@ b.c2.d1.ref3: 0
 b.c2.d1.ref4: 0
 ```
 
-####Example 2. 
-`curl -s localhost:3339/a/b/c1`
-returns:
+#### Example 2. Get even smaller subset of metrics
+ 
+>curl -s localhost:3339/a/b/c1
+
 ```
 d1.ref1: 0
 d1.ref3: 0
 d2.ref2: 0
 ```
 
-####Example 3. 
-`curl -s localhost:3339`  return all metrics in your config
+#### Example 3. Get all metrics in your config
+>curl -s localhost:3339  
 
-####Example 4. 
-`curl -s localhost:3339/a/b/c1/d1/ref1`
+#### Example 4. Get just the value of the requested counter:
 
-outputs just the value of the requested counter:
+>curl -s localhost:3339/a/b/c1/d1/ref1
 
 ```
 0
@@ -128,11 +133,8 @@ There is also basic erlang system info reporter that displays the following info
 
 currently expecting only one config variable `mbox_threshold` 
 probably will be more in the future as the system_info expands
-
-####Example 1. 
-`curl -s localhost:3339/system_info`
-
-returns:
+ 
+>curl -s localhost:3339/system_info
 
 ```
 Processes: 116
@@ -159,19 +161,16 @@ Memory:
     ets: 495968
 ```
 
-####Example 2.
-`curl -s localhost:3339/system_info/processes`
-
-returns only:
+>curl -s localhost:3339/system_info/processes
 
 ```
 Processes: 116
 ```
 
-####Example 3.
 `curl -s localhost:3339/system_info/large_mboxes`
 
-displays only those processes (registered process by regname, unregistered process -- by pid) in your system with mbox larger than configured `mbox_threshold`:
+displays only those processes in your system with mbox larger than configured `mbox_threshold`
+(registered process by regname, unregistered process -- by pid):
 
 ```
 Large Mboxes:
@@ -185,7 +184,6 @@ Large Mboxes:
 Similarly we can request `system_info/ports` and `system_info/memory`
 
 
-
-Under very high load system_info reports might be a bit slow, so it is important to be able to access only a subset of genuine interest.
+**NOTE:** Under very high load system_info reports might be a bit slow, so it is important to be able to access only a subset of genuine interest.
 
 
