@@ -1,10 +1,11 @@
 # oneup_metrics
 
-**High performance metrics app in erlang.**
+###High performance metrics app in Erlang 
 
 Usable as is, but still largely UNDER CONSTRUCTION.  
 
-Inspired by and built upon `oneup` app: https://github.com/andytill/oneup
+Inspired by and built upon `oneup` global counters:
+https://github.com/andytill/oneup
 
 NOTE: Only gauges and counters are available at this time.  Histograms and meters coming soon. 
 
@@ -16,7 +17,7 @@ Also, only a subset of metrics relevant to the process should be passed to it fo
 
 Then the process ends up with this metrics map subset in it's process dictionary, and that's how the process will be able to update global metrics during its lifetime.
  
-**Usage:**
+##Usage:
 
 First of all, see common tests for usage examples.
 
@@ -24,16 +25,21 @@ STEP 1.
 `sys.config` is expecting `metrics_config` app variable which is a list of metric names. 
 Eventually it will be a list of metric names with metric types, but currently only counters are supported. 
 
-Metric name is a list of atoms, i.e.
+Metric name is a list of atoms, i.e. `[total, tcp, requests]`
+
+`metrics_config` example:
+
 ```
-[total, requests]
-[total, responses]
-[total, sockets]
+[
+[total, requests],
+[total, responses],
+[total, sockets],
 [total, tcp, requests],
 [remote, tcp, requests],
-[remote, tcp, sockets]
+[remote, tcp, sockets],
 [local, tcp, requests],
 [local, tcp, sockets]
+]
 ```
 
 `oneup_metrics` app comes with sample `sys.config` which might change format in the future once different metric types, like meters and histograms are added.
@@ -47,19 +53,22 @@ OR for processes likely to update only a subset of the global metrics
 
 ```
 Prefix = [local, tcp],
-LocalTcpMetrics =  oneup_metrics:initial_get_config(Prefix)```
-````
+LocalTcpMetrics =  oneup_metrics:initial_get_config(Prefix)
+```
 
 Pass the MetricsMap to any child processes that are spawned very frequently:
 
-spawn(tcp_request, handle, [Request, MetricsMap])  
+```
+spawn(tcp_request, handle, [Request, MetricsMap])
+```
 
 Inside the process that will be updating metrics call  `oneup_metrics:enable(MetricsMap)`
 ```
 -module(tcp_request).
 
 handle(Request, MetricsMap)->
-%% this puts MetricsMap into process dictionary and metrics can now be updated from any method called by this process
+%% this puts MetricsMap into process dictionary and metrics can now be updated 
+%% from any method called by this process
 oneup_metrics:enable(MetricsMap),  
 
 oneup_metrics:increment([total, tcp, requests]),
@@ -72,12 +81,14 @@ process_request(Request).
 
 
 
-**BUILD-IN REPORTERS**
+##BUILT-IN Local HTTP Reporters
 
-It comes with built-in http reporter which is initialized if `http_port` app var is defined.   
+Enabled when `http_port` app var is defined. 
 
-If it is, oneup_metric stats are accessible from `localhost:_http_port_/[prefix]` where prefix is any prefix defined in your metrics_config, i.e.
-Example 1. 
+### Http reporter for metrics_config
+  
+If it is, metrics are accessible from `localhost:HttpPort/[prefix]` where prefix is any prefix defined in your `metrics_config`, i.e.
+####Example 1. 
 `curl -s localhost:3339/a`
 returns:
 ```
@@ -87,7 +98,7 @@ b.c2.d1.ref3: 0
 b.c2.d1.ref4: 0
 ```
 
-Example 2. 
+####Example 2. 
 `curl -s localhost:3339/a/b/c1`
 returns:
 ```
@@ -96,10 +107,19 @@ d1.ref3: 0
 d2.ref2: 0
 ```
 
-Example 3. 
+####Example 3. 
 `curl -s localhost:3339`  return all metrics in your config
 
+####Example 4. 
+`curl -s localhost:3339/a/b/c1/d1/ref1`
 
+outputs just the value of the requested counter:
+
+```
+0
+```
+
+## HTTP Reporter for basic Erlang system info
 There is also basic erlang system info reporter that displays the following info:
 `processes`
 `ports`
@@ -109,18 +129,20 @@ There is also basic erlang system info reporter that displays the following info
 currently expecting only one config variable `mbox_threshold` 
 probably will be more in the future as the system_info expands
 
-Example 3. 
+####Example 1. 
 `curl -s localhost:3339/system_info`
+
 returns:
 
-```Processes: 116
+```
+Processes: 116
 Ports: 18
 Large Mboxes:
-     init: 0
-     erts_code_purger: 0
-     <0.2.0>: 0
-     <0.3.0>: 0
-     <0.5.0>: 0
+     my_tcp_request_handler: 10000
+     my_tcp_response_handler: 2000
+     <0.212.0>: 15000
+     <0.312.0>: 1000
+     <0.512.0>: 3500
      .
      .
      .
@@ -137,9 +159,33 @@ Memory:
     ets: 495968
 ```
 
+####Example 2.
+`curl -s localhost:3339/system_info/processes`
+
+returns only:
+
+```
+Processes: 116
+```
+
+####Example 3.
+`curl -s localhost:3339/system_info/large_mboxes`
+
+displays only those processes (registered process by regname, unregistered process -- by pid) in your system with mbox larger than configured `mbox_threshold`:
+
+```
+Large Mboxes:
+     my_tcp_request_handler: 10000
+     my_tcp_response_handler: 2000
+     <0.212.0>: 15000
+     <0.312.0>: 1000
+     <0.512.0>: 3500
+```
+
+Similarly we can request `system_info/ports` and `system_info/memory`
 
 
 
-
+Under very high load system_info reports might be a bit slow, so it is important to be able to access only a subset of genuine interest.
 
 
