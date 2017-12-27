@@ -6,6 +6,7 @@
   {applications,
    [kernel,
     stdlib,
+    lager,
     oneup
    ]},
   {env,[]},

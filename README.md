@@ -82,7 +82,18 @@ end,
 process_request(Request).
 ```
 
+### Add metrics on the fly
+ 
+```
+NewMetric = [x,y,z],
+oneup_metrics:add(NewMetric)
+```
 
+
+```
+NewMetrics = [[x,y,z1],[x,y,z2],[k,l,m]],
+oneup_metrics:add_multiple(NewMetrics)
+```
 
 ## BUILT-IN Local HTTP Reporters
 

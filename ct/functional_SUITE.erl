@@ -35,13 +35,21 @@
 -export([test_metrics_init/1,
   test_http_reporter/1,
   test_system_info_reporter/1,
-  test_metric_updates/1]).
+  test_metric_updates/1,
+  test_metric_add/1,
+  test_metric_add_multiple/1]).
 
-all() -> [test_metrics_init, test_http_reporter, test_system_info_reporter, test_metric_updates].
+all() -> [
+  test_metrics_init,
+  test_http_reporter,
+  test_system_info_reporter,
+  test_metric_updates,
+  test_metric_add,
+  test_metric_add_multiple].
 
 init_per_suite(Config) ->
-  application:ensure_all_started(oneup_metrics),
   application:ensure_all_started(lager),
+  application:ensure_all_started(oneup_metrics),
   ct:print("loaded apps: ~p", [application:loaded_applications()]),
   true = lists:member({cowboy,"Small, fast, modern HTTP server.","2.2.0"}, application:loaded_applications()),
   Config.
@@ -95,6 +103,27 @@ test_metric_updates(Config)->
   [10 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
   Config.
 
+test_metric_add(Config)->
+  NewMetric = [x,y,z],
+  oneup_metrics:add(NewMetric),
+  ModifiedMetricsMap = oneup_metrics:initial_get_config(),
+  ct:print("ModifiedMetricsMap: ~p", [ModifiedMetricsMap]),
+  #{x := #{y := #{z := NewCounter}}} = ModifiedMetricsMap,
+  0 = oneup:get(NewCounter),
+  oneup_metrics:enable(ModifiedMetricsMap),
+  oneup_metrics:increment(NewMetric),
+  1 = oneup_metrics:get(NewMetric),
+  Config.
+
+test_metric_add_multiple(Config)->
+  NewMetrics = [[x,y,z1],[x,y,z2],[k,l,m]],
+  oneup_metrics:add_multiple(NewMetrics),
+  MultiAddedMetricsMap = oneup_metrics:initial_get_config(),
+  ct:print("MultiAddedMetricsMap ~p", [MultiAddedMetricsMap]),
+  oneup_metrics:enable(MultiAddedMetricsMap),
+  [oneup_metrics:increment(Metric, 1000000) || Metric <- NewMetrics],
+  [1000000 = oneup_metrics:get(Metric) || Metric <- NewMetrics],
+  Config.
 
 
 deep_compare(MetricsMap1, MetricsMap2)->

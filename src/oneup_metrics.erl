@@ -53,11 +53,15 @@ enable(MetricsMap)->
 enable(Prefix, MetricsMap)->
   put(?METRICS_MAP, get_metrics(MetricsMap, Prefix)).
 
-reset()->
-  ok = gen_server:call(?SERVER, reset).
+%%TODO reset()->
+%%  ok = gen_server:call(?SERVER, reset).
 
-add(Metric)->
-  ok = gen_server:call(?SERVER, add, Metric).
+add_multiple(NewMetrics)->
+  {ok, _ExpandedMetrics} = gen_server:call(?SERVER, {add_multiple, NewMetrics}).
+
+add(NewMetric) ->
+  {ok, _ExpandedMetrics} = gen_server:call(?SERVER, {add, NewMetric}).
+
 
 start_link(MetricsMap) ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [MetricsMap], []).
@@ -74,10 +78,12 @@ handle_call(metrics, _From, #state{metrics = Metrics} = State) ->
 handle_call({metrics, Prefix}, _From, #state{metrics = Metrics} = State) when is_list(Prefix) ->
   SubMetrics = get_metrics(Metrics, Prefix),
   {reply, {ok, SubMetrics}, State};
-handle_call({add, Metric}, _From, #state{ metrics = Metrics} = State)->
+handle_call({add, Metric}, _From, #state{ metrics = Metrics } = State)->
   ExpandedMetrics = add_metric(Metric, Metrics),
-  {reply, ExpandedMetrics, State#state{metrics = ExpandedMetrics}}.
-
+  {reply, {ok, ExpandedMetrics}, State#state{metrics = ExpandedMetrics}};
+handle_call({add_multiple, NewMetrics}, _From, #state{ metrics = Metrics } = State)->
+  ExpandedMetrics = add_metrics(NewMetrics, Metrics),
+  {reply, {ok, ExpandedMetrics}, State#state{metrics = ExpandedMetrics}}.
 handle_cast(_Request, State) ->
   {noreply, State}.
 
@@ -107,11 +113,14 @@ config()->
 %%% TODO only counters/gauges are supported right now
 %%% Histograms and meters coming soon
 init_from_config(Config) when is_list(Config)->
-  Metrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric(Metric, AllMetrics) end, #{}, Config),
+  add_metrics(Config, #{}).
+
+add_metrics(NewMetrics, InitialMetrics)->
+  Metrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric(Metric, AllMetrics) end, InitialMetrics, NewMetrics),
   lager:info("Metrics initialized to ~p", [Metrics]),
   Metrics.
 
-add_metric(Metric, AllMetrics)->
+add_metric(Metric, AllMetrics) when is_list(Metric)->
   add_nested_metric(AllMetrics, Metric, Metric).
 
 %% Please note that it would've been more elegant to pattern-match
