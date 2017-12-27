@@ -39,7 +39,7 @@ stop(_State) ->
 start_http_reporter(Metrics, HttpPort)->
   application:ensure_all_started(cowboy),
   {ok, SystemInfoConfig} = application:get_env(system_info_config),
-  lager:info("Starting oneup stats http server on ~p...", [HttpPort]),
+  lager:info("Starting oneup stats http server on ~p with system_info_config ~p and metrics ~p", [HttpPort, SystemInfoConfig, Metrics]),
 
   Dispatch = cowboy_router:compile([
     {'_', [
