@@ -83,9 +83,6 @@ test_system_info_reporter(Config)->
   {ok, HttpPort} = application:get_env(oneup_metrics, http_port),
   CurlResult = os:cmd("curl -s localhost:" ++ integer_to_list(HttpPort) ++ "/system_info"),
   ct:print("CURL RESULT:~n~s", [CurlResult]),
-  ExpectedResult = lists:flatten(io_lib:format("b.c1.d1.ref1: 0~nb.c1.d2.ref2: 0~nb.c2.d1.ref3: 0~nb.c2.d1.ref4: 0", [])),
-  ct:print("Excpected Result:~n~s", [ExpectedResult]),
-%%  true = string:equal(CurlResult, ExpectedResult),
   Config.
 
 test_metric_updates(Config)->
@@ -123,6 +120,16 @@ test_metric_add_multiple(Config)->
   oneup_metrics:enable(MultiAddedMetricsMap),
   [oneup_metrics:increment(Metric, 1000000) || Metric <- NewMetrics],
   [1000000 = oneup_metrics:get(Metric) || Metric <- NewMetrics],
+
+  {ok, HttpPort} = application:get_env(oneup_metrics, http_port),
+
+  CurlResult = os:cmd("curl -s localhost:" ++ integer_to_list(HttpPort)),
+  ct:print("CURL RESULT:~n~s", [CurlResult]),
+
+  CurlResult_X = os:cmd("curl -s localhost:" ++ integer_to_list(HttpPort) ++ "/x"),
+  ct:print("X CURL RESULT:~n~s", [CurlResult_X]),
+
+
   Config.
 
 

@@ -29,10 +29,12 @@ content_types_provided(Req, State) ->
     {<<"text/plain">>, process_request}
   ], Req, State}.
 
-process_request(#{path_info := [<<"reset">>|PathBinTail]} = Req, [MetricsMap] = State) ->
+process_request(Req, [] = _State) ->
+  process_request(Req, [oneup_metrics:initial_get_config()]);
+process_request(#{path_info := [<<"reset">>|PathBinTail]} = Req, [MetricsMap] = State) when is_map(MetricsMap) ->
   RespBody = apply_to_metrics(PathBinTail, MetricsMap, fun oneup_metrics:reset_counters/1),
   {RespBody, Req, State};
-process_request(#{path_info := PathBinList} = Req, [MetricsMap] = State)  ->
+process_request(#{path_info := PathBinList} = Req, [MetricsMap] = State) when is_map(MetricsMap) ->
   RespBody = apply_to_metrics(PathBinList, MetricsMap, fun oneup_metrics:display_counters/1),
   {RespBody, Req, State}.
 
