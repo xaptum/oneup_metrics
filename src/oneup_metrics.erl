@@ -112,7 +112,7 @@ init_from_config(Config) when is_list(Config)->
   Metrics.
 
 add_metric(Metric, AllMetrics)->
-  add_nestbed_metric(AllMetrics, Metric, Metric).
+  add_nested_metric(AllMetrics, Metric, Metric).
 
 %% Please note that it would've been more elegant to pattern-match
 %% in function args instead of case metric elements but it doesn't work with maps
