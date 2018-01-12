@@ -10,9 +10,19 @@
 -author("iguberman").
 
 -behaviour(gen_server).
+-behaviour(oneup_metrics).
 
-%% API
--export([start_link/0]).
+%% gen_server callbacks
+-export([start_link/2]).
+
+%% oneup_metrics callbacks
+-export([
+  init_metric/1,
+  update/1,
+  update/2,
+  reset/1,
+  get/1]).
+
 
 %% gen_server callbacks
 -export([init/1,
@@ -24,123 +34,93 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {}).
+-define(INTERVAL, 5).
+-define(SECONDS_PER_MINUTE, 60.0).
+
+-define(INTERVAL_MILLIS, 5000).
+-define(ONE_MINUTE_MILLIS, 60 * 1000).
+-define(FIVE_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 5).
+-define(FIFTEEN_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 15).
+-define(HOUR_MINUTES, 60).
+-define(DAY_MINUTES, ?HOUR_MINUTES * 24).
+
+-record(state, {counter,
+  instant_rate,
+  one_minute_rate,
+  five_minute_rate,
+  fifteen_minute_rate,
+  hour_rate,
+  day_rate}).
 
 %%%===================================================================
-%%% API
+%%% oneup_metrics callbacks
 %%%===================================================================
 
-%%--------------------------------------------------------------------
-%% @doc
-%% Starts the server
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(start_link() ->
-  {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link() ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+init_metric(MetricName)->
+  {?MODULE, oneup:new_counter()}.
+
+update({?MODULE, CounterRef})->
+  oneup:inc(CounterRef).
+
+update({?MODULE, CounterRef}, Value) when is_integer(Value) ->
+  oneup:inc2(CounterRef, Value).
+
+reset({?MODULE, CounterRef}) ->
+  oneup:set(CounterRef, 0).
+
+get(MetricName) ->
+  gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), get).
+
+start_link(MetricName, CounterRef) ->
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [CounterRef], []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Initializes the server
-%%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
-%% @end
-%%--------------------------------------------------------------------
--spec(init(Args :: term()) ->
-  {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term()} | ignore).
-init([]) ->
-  {ok, #state{}}.
+init([CounterRef]) ->
+  erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
+  {ok, #state{counter = CounterRef}}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling call messages
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
-    State :: #state{}) ->
-  {reply, Reply :: term(), NewState :: #state{}} |
-  {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
-  {stop, Reason :: term(), NewState :: #state{}}).
-handle_call(_Request, _From, State) ->
+handle_call(get, _From, State) ->
   {reply, ok, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling cast messages
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_cast(Request :: term(), State :: #state{}) ->
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast(_Request, State) ->
   {noreply, State}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling all non call/cast messages
-%%
-%% @spec handle_info(Info, State) -> {noreply, State} |
-%%                                   {noreply, State, Timeout} |
-%%                                   {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
--spec(handle_info(Info :: timeout() | term(), State :: #state{}) ->
-  {noreply, NewState :: #state{}} |
-  {noreply, NewState :: #state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #state{}}).
-handle_info(_Info, State) ->
-  {noreply, State}.
+handle_info({timeout, _TimerRef, tick},
+    #state{
+      counter = CounterRef,
+      one_minute_rate = OneMinuteRate,
+      five_minute_rate = FiveMinuteRate,
+      fifteen_minute_rate = FifteenMinuteRate,
+      hour_rate = HourRate,
+      day_rate = DayRate} = State) ->
+  Count = oneup:get(CounterRef),
+  oneup_metrics:reset(CounterRef), %% reset
+  {noreply, State#state{
+    instant_rate = Count / ?INTERVAL,
+    one_minute_rate = tick(1, Count, OneMinuteRate),
+    five_minute_rate = tick(5, Count, FiveMinuteRate),
+    fifteen_minute_rate = tick(15, Count, FifteenMinuteRate),
+    hour_rate = tick(?HOUR_MINUTES, Count, HourRate),
+    day_rate = tick(?DAY_MINUTES, Count, DayRate)}}.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
-%%
-%% @spec terminate(Reason, State) -> void()
-%% @end
-%%--------------------------------------------------------------------
--spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
-    State :: #state{}) -> term()).
 terminate(_Reason, _State) ->
   ok.
 
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Convert process state when code is changed
-%%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
-%% @end
-%%--------------------------------------------------------------------
--spec(code_change(OldVsn :: term() | {down, term()}, State :: #state{},
-    Extra :: term()) ->
-  {ok, NewState :: #state{}} | {error, Reason :: term()}).
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+alpha(Minutes)->
+  1 - math:exp(-?INTERVAL / ?SECONDS_PER_MINUTE / Minutes).
+
+tick(_Minutes, Count, undefined)->
+  Count / ?INTERVAL;  %% just return instant rate
+tick(Minutes, Count, PrevRate)->
+  InstantRate = Count / ?INTERVAL,
+  PrevRate + (alpha(Minutes) * (InstantRate - PrevRate)).

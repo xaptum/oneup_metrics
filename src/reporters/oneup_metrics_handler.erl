@@ -103,6 +103,5 @@ format(Other, _Level)->
 stat_display_name(StatName, Level) when is_list(StatName) ->
   tabs(Level) ++ string:join([atom_to_list(A) || A <- lists:nthtail(Level, StatName)], ".").
 
-
 tabs(Level)->
   string:copies("   ", Level).

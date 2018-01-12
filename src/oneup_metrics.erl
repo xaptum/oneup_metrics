@@ -13,6 +13,8 @@
 
 -define(METRICS_MAP, metrics_config).
 
+-define(METRIC_TYPES, [counter, gauge, meter, histogram]).
+
 -behaviour(gen_server).
 
 %% API
@@ -30,12 +32,31 @@
 
 -record(state, {metrics}).
 
+-type metric() :: term().
+
+%% return one or more ref counters with implementing module name,
+%% i.e. histogram will have two ref counters per one metric, so returns
+%% { oneup_histogram, ValueAggregateCounterReference, OccurrenceCounterReference}
+%% while a counter will return:
+%% { oneup_counter, ValueCounterReference}
+-callback init_metric(MetricName :: list()) -> Response :: term().
+
+%% update with specific value
+-callback update(Metric :: term(), Value :: number()) -> Response :: term().
+
+%% update with one
+-callback update(Metric :: term()) -> Response :: term().
+
+-callback reset(Metric :: term()) -> Response :: term().
+
+-callback get(Metric :: term()) -> Response :: term().
+
 %%%===================================================================
 %%% API
 %%%===================================================================
 
 %%% This method is to retrieve metrics map for the first time for top level processes or supervisors
-%%% to pass on to ther children
+%%% to pass on to their children
 initial_get_config()->
   {ok, Metrics} = gen_server:call(?SERVER, metrics),
   Metrics.
@@ -66,6 +87,7 @@ add(NewMetric) ->
 start_link(MetricsMap) ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [MetricsMap], []).
 
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -84,6 +106,7 @@ handle_call({add, Metric}, _From, #state{ metrics = Metrics } = State)->
 handle_call({add_multiple, NewMetrics}, _From, #state{ metrics = Metrics } = State)->
   ExpandedMetrics = add_metrics(NewMetrics, Metrics),
   {reply, {ok, ExpandedMetrics}, State#state{metrics = ExpandedMetrics}}.
+
 handle_cast(_Request, State) ->
   {noreply, State}.
 
@@ -100,6 +123,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Utilities
 %%%===================================================================
 
+
+metric_name_to_atom(MetricName)->
+  list_to_atom(string:join([atom_to_list(Part) || Part <- MetricName], "_")).
+
+
 %%% Metrics Map is expected to be in the process dictionary of any process that got it
 %%% from its supervisor or parent process
 %%% All the update methods in this module depend on this being the case
@@ -115,34 +143,35 @@ config()->
 init_from_config(Config) when is_list(Config)->
   add_metrics(Config, #{}).
 
-add_metrics(NewMetrics, InitialMetrics)->
-  Metrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric(Metric, AllMetrics) end, InitialMetrics, NewMetrics),
+add_metrics({Type, NewMetrics}, InitialMetrics)->
+  Metrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
   lager:info("Metrics initialized to ~p", [Metrics]),
   Metrics.
 
-add_metric(Metric, AllMetrics) when is_list(Metric)->
-  add_nested_metric(AllMetrics, Metric, Metric).
+add_metric({Type, Metric}, AllMetrics) when is_list(Metric)->
+  add_nested_metric(AllMetrics, Metric, Metric, Type).
 
 %% Please note that it would've been more elegant to pattern-match
 %% in function args instead of case metric elements but it doesn't work with maps
 %% due to non-guaranteed order of argument resolution
 
-%% Reached the end of metric-name list, create new counter ref
-add_nested_metric(Metrics, Metric, [Last]) when is_map(Metrics)->
+%% Reached the end of metric-name list, initialize the metric
+add_nested_metric(Metrics, Metric, [Last], Type) when is_map(Metrics), is_atom(Type)->
   case Metrics of
     #{Last := ExistingCounter} when is_reference(ExistingCounter) ->
       lager:error("Duplicate entry in metrics config: ~p!  Exiting...", [Metric]),
       true = false;
     _ ->
       lager:info("Adding metric ~p", [Metric]),
-      Metrics#{Last => oneup:new_counter()}
+      Metrics#{Last => Type:init() }
+%%      Metrics#{Last => oneup:new_counter()}
   end;
-add_nested_metric(Metrics, Metric, [Head | Tail]) when is_map(Metrics)->
+add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
   case Metrics of
     %% Existing entry
-    #{ Head := NestedMetrics} -> Metrics#{Head => add_nested_metric(NestedMetrics, Metric, Tail)};
+    #{ Head := NestedMetrics} -> Metrics#{Head => add_nested_metric(NestedMetrics, Metric, Tail, Type)};
     %% First encounter of this entry
-    _ -> Metrics#{Head => add_nested_metric(#{}, Metric, Tail)}
+    _ -> Metrics#{Head => add_nested_metric(#{}, Metric, Tail, Type)}
   end.
 
 increment(Metric)->
