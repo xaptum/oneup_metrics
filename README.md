@@ -24,16 +24,19 @@ First of all, see eunit and common tests for usage examples.  To run:
 >make test
 
 ### STEP 1. 
-`sys.config` is expecting `metrics_config` app variable which is a list of metric names. 
-Eventually it will be a list of metric names with metric types, but currently only counters are supported. 
+`sys.config` is expecting `metrics_config` app variable which is a proplist of list of metric type implementation module as key, and a list of metric names of that type as values.
 
 Metric name is a list of atoms, i.e. `[total, tcp, requests]`
+Metric type is an atom representing `oneup_metrics` behavior module implementing a specific metric type.  
+There are 4 types available out of the box: `oneup_counter`, `oneup_meter`, `oneup_histogram`, and `oneup_gauge`
+
+Any third party module could be a metrics type as long as it implements `oneup_metrics` behavior.
 
 `metrics_config` example:
 
-```
-[
-[total, requests],
+```erlang
+[{ oneup_meter,
+[[total, requests],
 [total, responses],
 [total, sockets],
 [total, tcp, requests],
@@ -41,7 +44,21 @@ Metric name is a list of atoms, i.e. `[total, tcp, requests]`
 [remote, tcp, sockets],
 [local, tcp, requests],
 [local, tcp, sockets]
-]
+]],
+{oneup_histogram, 
+[[remote, tcp, roundtrip_time],
+ [local, tcp, roundtrip_time],
+ [ingress, msg_request, latency],
+ [ingress, control_request, latency]
+ ],
+ {oneup_gauge,
+  [ [connections, remote, active],
+   [connections, remote, closed],
+   [connections, local, active],
+   [connections, local, closed[
+   ]
+ }
+].
 ```
 
 `oneup_metrics` app comes with sample `sys.config` which might change format in the future once different metric types, like meters and histograms are added.

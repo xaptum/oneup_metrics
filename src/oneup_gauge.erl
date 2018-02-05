@@ -9,28 +9,72 @@
 -module(oneup_gauge).
 -author("iguberman").
 
+-behaviour(gen_server).
 -behaviour(oneup_metrics).
 
-%% API
+%% oneup_metrics callbacks
 -export([
-  init/0,
+  init_metric/1,
   update/1,
-  update/2,
-  reset/1,
-  get/1]).
+  update/2]).
 
-init()->
-  {?MODULE, oneup:new_counter()}.
+%% gen_server callbacks
+-export([init/1,
+  handle_call/3,
+  handle_cast/2,
+  handle_info/2,
+  terminate/2,
+  code_change/3]).
+
+-define(SERVER, ?MODULE).
+
+-record(state, {gauge}).
+
+
+%%%===================================================================
+%%% oneup_metrics callbacks
+%%%===================================================================
+
+init_metric(MetricName)->
+  Gauge = oneup:new_counter(),
+  oneup_gauge_sup:start_gauge(MetricName, Gauge),
+  {?MODULE, Gauge}.
 
 %% This method doesn't make a lot of sense for gauges
-update({?MODULE, CounterRef})->
+update(CounterRef)->
   oneup:set(CounterRef, 1).
 
-update({?MODULE, CounterRef}, Value) when is_integer(Value) ->
+update(CounterRef, Value) when is_integer(Value) ->
   oneup:set(CounterRef, Value).
 
-reset({?MODULE, CounterRef}) ->
-  oneup:set(CounterRef, 0).
 
-get({?MODULE, CounterRef}) ->
-  oneup:get(CounterRef).
+%%%===================================================================
+%%% gen_server API
+%%%===================================================================
+
+start_link(MetricName, GaugeRef) ->
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [GaugeRef], []).
+
+%%%===================================================================
+%%% gen_server callbacks
+%%%===================================================================
+
+init([GaugeRef]) ->
+  {ok, #state{gauge = GaugeRef}}.
+
+handle_call(get, _From, #state{gauge = GaugeRef} = State) ->
+  {reply, oneup:get(GaugeRef), State};
+handle_call(reset, _From, #state{gauge = GaugeRef} = State) ->
+  {reply, oneup:set(GaugeRef, 0), State}.
+
+handle_cast(_Request, State) ->
+  {noreply, State}.
+
+handle_info(_Req, State)->
+  {noreply, State}.
+
+terminate(_Reason, _State) ->
+  ok.
+
+code_change(_OldVsn, State, _Extra) ->
+  {ok, State}.

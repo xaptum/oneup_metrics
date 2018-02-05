@@ -32,24 +32,30 @@
 
 -record(state, {metrics}).
 
--type metric() :: term().
+
+-type counters() :: reference() | [reference(), ... ].
+-type metric_module() :: atom().
+-type metric() :: {metric_module(), counters()}.
+-type metric_name() :: [atom(), ...].
 
 %% return one or more ref counters with implementing module name,
 %% i.e. histogram will have two ref counters per one metric, so returns
 %% { oneup_histogram, ValueAggregateCounterReference, OccurrenceCounterReference}
 %% while a counter will return:
 %% { oneup_counter, ValueCounterReference}
--callback init_metric(MetricName :: list()) -> Response :: term().
+
+-callback init_metric(MetricName :: metric_name()) -> Response :: metric().
+
+%% NOTE: updates are the two callbacks that are expected to be called very frequently and
+%% therefore we pass the counter refs directly from the calling process
+%% which is supposed to keep around the metrics map with all the atomic counter refs to be able to do that without
+%% requesting this info from some central place thus avoiding any bottlenecks.
 
 %% update with specific value
--callback update(Metric :: term(), Value :: number()) -> Response :: term().
+-callback update(Counters :: counters(), Value :: number()) -> Response :: any().
 
 %% update with one
--callback update(Metric :: term()) -> Response :: term().
-
--callback reset(Metric :: term()) -> Response :: term().
-
--callback get(Metric :: term()) -> Response :: term().
+-callback update(Metric :: counters()) -> Response :: any().
 
 %%%===================================================================
 %%% API
@@ -138,15 +144,13 @@ config()->
   erlang:get(?METRICS_MAP).
 
 
-%%% TODO only counters/gauges are supported right now
-%%% Histograms and meters coming soon
 init_from_config(Config) when is_list(Config)->
-  add_metrics(Config, #{}).
+  lists:foldl(fun(Type, AllMetrics) -> add_metrics({Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
 
 add_metrics({Type, NewMetrics}, InitialMetrics)->
-  Metrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
-  lager:info("Metrics initialized to ~p", [Metrics]),
-  Metrics.
+  SpecificTypeMetrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
+  lager:info("~p metrics initialized to ~p", [Type, SpecificTypeMetrics]),
+  SpecificTypeMetrics.
 
 add_metric({Type, Metric}, AllMetrics) when is_list(Metric)->
   add_nested_metric(AllMetrics, Metric, Metric, Type).
@@ -158,13 +162,12 @@ add_metric({Type, Metric}, AllMetrics) when is_list(Metric)->
 %% Reached the end of metric-name list, initialize the metric
 add_nested_metric(Metrics, Metric, [Last], Type) when is_map(Metrics), is_atom(Type)->
   case Metrics of
-    #{Last := ExistingCounter} when is_reference(ExistingCounter) ->
+    #{Last := {Type, _ExistingCounter} } when is_atom(Type) ->
       lager:error("Duplicate entry in metrics config: ~p!  Exiting...", [Metric]),
       true = false;
     _ ->
       lager:info("Adding metric ~p", [Metric]),
-      Metrics#{Last => Type:init() }
-%%      Metrics#{Last => oneup:new_counter()}
+      Metrics#{Last => Type:init_metric(Metric) }
   end;
 add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
   case Metrics of
@@ -174,48 +177,26 @@ add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
     _ -> Metrics#{Head => add_nested_metric(#{}, Metric, Tail, Type)}
   end.
 
-increment(Metric)->
-  update(Metric, fun(Ref)-> oneup:inc(Ref) end).
 
-%% TODO rename increment/3
-increment(Metrics, Metric) when is_map(Metrics)->
-  update(Metrics, Metric, fun(Ref)-> oneup:inc(Ref) end);
-increment(Metric, Value) when is_integer(Value)->
-  update(Metric, fun(Ref) -> oneup:inc2(Ref, Value) end).
+get(MetricName) ->
+  gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), get).
 
-increment(Metrics, Metric, Value)->
-  update(Metrics, Metric, fun(Ref) -> oneup:inc2(Ref, Value) end).
+reset(MetricName) ->
+  gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), reset).
 
-set(Metric, Value)->
-  update(Metric, fun(Ref) -> oneup:set(Ref, Value) end).
+update({MetricType, CounterRef}) when is_atom(MetricType)->
+  MetricType:update(CounterRef).
 
-set(Metrics, Metric, Value)->
-  update(Metrics, Metric, fun(Ref) -> oneup:set(Ref, Value) end).
+update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
+  MetricType:update(CounterRef, Value).
 
-reset(Metric)->
-  update(Metric, fun(Ref) -> oneup:set(Ref, 0) end).
-
-reset(Metrics, Metric)->
-  update(Metrics, Metric, fun(Ref) -> oneup:set(Ref, 0) end).
-
-update(Metric, Fun) ->
-  case config() of
-    Metrics when is_map(Metrics)-> update(Metrics, Metric, Fun);
-    _Other -> ok
-  end.
-
-update(Metrics, Metric, Fun)->
-  case get_counter(Metrics, Metric) of
-    {error, Error} -> lager:warning("Metric ~p error ~p", [Metric, Error]);
-    Ref -> Fun(Ref)
-  end.
 
 get_counter(Metric)->
   get_counter(config(), Metric).
 
 get_counter(Metrics, [Metric]) ->
   case Metrics of
-    #{Metric := CounterRef} when is_reference(CounterRef) -> CounterRef;
+    #{Metric := {MetricType, CounterRef}} when is_atom(MetricType) -> {MetricType, CounterRef};
     _-> {error, uninitialized}
   end;
 get_counter(Metrics, [Head | Tail])->
@@ -224,13 +205,13 @@ get_counter(Metrics, [Head | Tail])->
     _-> {error, uninitialized}
   end.
 
-get(Metric)->
-  CounterRef = get_counter(Metric),
-  oneup:get(CounterRef).
+get_metric(Metric)->
+  {Type, CounterRef} = get_counter(Metric),
+  Type:get(CounterRef).
 
-get(Metrics, Metric)->
-  CounterRef = get_counter(Metrics, Metric),
-  oneup:get(CounterRef).
+get_metric(Metrics, Metric)->
+  {Type, CounterRef} = get_counter(Metrics, Metric),
+  Type:get(CounterRef).
 
 
 %% Get entire nested map
@@ -245,17 +226,17 @@ get_metrics(Metrics, [Head | Tail])->
     _-> {error, uninitialized}
   end.
 
-reset_counters(CounterRef) when is_reference(CounterRef)->
-  oneup:set(CounterRef, 0);
-reset_counters(MetricsMap) ->
-  maps:fold(fun(_Key, Val, _Acc) -> reset_counter(Val) end, 'N/A', MetricsMap).
 
-reset_counter(Val) when is_reference(Val) ->
-  oneup:set(Val, 0);
-reset_counter(Val) when is_map(Val)->
+reset_counters(MetricsMap) ->
+  maps:fold(fun(Key, Val, _Acc) -> reset_counter(Key, Val) end, 'N/A', MetricsMap).
+
+reset_counter(MetricName, {Type, CounterRef}) when is_reference(CounterRef) ->
+  reset(MetricName);
+reset_counter(_MetricName, Val) when is_map(Val)->
   reset_counters(Val).
 
 
+%% TODO make it part of metric gen_servers
 display_counters(CounterRef) when is_reference(CounterRef) ->
   integer_to_binary(oneup:get(CounterRef));
 display_counters(MetricsMap) when is_map(MetricsMap)->

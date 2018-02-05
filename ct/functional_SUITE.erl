@@ -10,11 +10,11 @@
 -author("iguberman").
 
 -define(TEST_CONFIG, [
-  [a, b, c1, d1, ref1],
+  {oneup_counter, [[a, b, c1, d1, ref1],
   [a, b, c1, d2, ref2],
   [a, b, c2, d1, ref3],
   [a, b, c2, d1, ref4],
-  [a2, b2, c2, d2, ref5]
+  [a2, b2, c2, d2, ref5]]}
 ]).
 
 -include_lib("common_test/include/ct.hrl").
@@ -102,7 +102,7 @@ test_metric_updates(Config)->
 
 test_metric_add(Config)->
   NewMetric = [x,y,z],
-  oneup_metrics:add(NewMetric),
+  oneup_metrics:add_metric({oneup_counter, NewMetric}),
   ModifiedMetricsMap = oneup_metrics:initial_get_config(),
   ct:print("ModifiedMetricsMap: ~p", [ModifiedMetricsMap]),
   #{x := #{y := #{z := NewCounter}}} = ModifiedMetricsMap,

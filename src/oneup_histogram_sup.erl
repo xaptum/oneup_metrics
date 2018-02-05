@@ -44,5 +44,5 @@ init([]) ->
 %%% Internal functions
 %%%===================================================================
 
-start_histogram(MetricName, Counters) when is_list(MetricName) ->
-  supervisor:start_child(?MODULE, [MetricName, Counters]).
+start_histogram(MetricName, CounterRefs) when is_list(MetricName) ->
+  supervisor:start_child(?MODULE, [MetricName, CounterRefs]).

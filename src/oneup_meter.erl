@@ -19,9 +19,7 @@
 -export([
   init_metric/1,
   update/1,
-  update/2,
-  reset/1,
-  get/1]).
+  update/2]).
 
 
 %% gen_server callbacks
@@ -52,27 +50,29 @@
   hour_rate,
   day_rate}).
 
+
+
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+start_link(MetricName, CounterRef) ->
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [CounterRef], []).
+
 %%%===================================================================
 %%% oneup_metrics callbacks
 %%%===================================================================
 
 init_metric(MetricName)->
-  {?MODULE, oneup:new_counter()}.
+  Counter = {oneup:new_counter()},
+  oneup_meter_sup:start_meter(MetricName, Counter),
+  {?MODULE, Counter}.
 
-update({?MODULE, CounterRef})->
+update(CounterRef)->
   oneup:inc(CounterRef).
 
-update({?MODULE, CounterRef}, Value) when is_integer(Value) ->
+update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
-
-reset({?MODULE, CounterRef}) ->
-  oneup:set(CounterRef, 0).
-
-get(MetricName) ->
-  gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), get).
-
-start_link(MetricName, CounterRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [CounterRef], []).
 
 %%%===================================================================
 %%% gen_server callbacks
