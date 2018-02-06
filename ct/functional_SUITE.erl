@@ -88,11 +88,11 @@ test_system_info_reporter(Config)->
 test_metric_updates(Config)->
   InitializedMetricsMap = oneup_metrics:initial_get_config(),
   oneup_metrics:enable(InitializedMetricsMap),
-  [oneup_metrics:increment(Metric) || Metric <- ?TEST_CONFIG],
+  [oneup_metrics:update(Metric) || Metric <- ?TEST_CONFIG],
   [1 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
-  [oneup_metrics:increment(Metric) || Metric <- ?TEST_CONFIG],
+  [oneup_metrics:update(Metric) || Metric <- ?TEST_CONFIG],
   [2 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
-  [oneup_metrics:increment(Metric, 2) || Metric <- ?TEST_CONFIG],
+  [oneup_metrics:update(Metric, 2) || Metric <- ?TEST_CONFIG],
   [4 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
   [oneup_metrics:reset(Metric) || Metric <- ?TEST_CONFIG],
   [0 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
@@ -108,7 +108,7 @@ test_metric_add(Config)->
   #{x := #{y := #{z := NewCounter}}} = ModifiedMetricsMap,
   0 = oneup:get(NewCounter),
   oneup_metrics:enable(ModifiedMetricsMap),
-  oneup_metrics:increment(NewMetric),
+  oneup_metrics:update(NewMetric),
   1 = oneup_metrics:get(NewMetric),
   Config.
 
@@ -118,7 +118,7 @@ test_metric_add_multiple(Config)->
   MultiAddedMetricsMap = oneup_metrics:initial_get_config(),
   ct:print("MultiAddedMetricsMap ~p", [MultiAddedMetricsMap]),
   oneup_metrics:enable(MultiAddedMetricsMap),
-  [oneup_metrics:increment(Metric, 1000000) || Metric <- NewMetrics],
+  [oneup_metrics:update(Metric, 1000000) || Metric <- NewMetrics],
   [1000000 = oneup_metrics:get(Metric) || Metric <- NewMetrics],
 
   {ok, HttpPort} = application:get_env(oneup_metrics, http_port),

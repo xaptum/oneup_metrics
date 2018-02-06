@@ -33,9 +33,9 @@
 -record(state, {counter}).
 
 init_metric(MetricName)->
-  Counter = oneup:new_counter(),
-  oneup_gauge_sup:start_counter(MetricName, counter),
-  {?MODULE, Counter}.
+  CounterRef = oneup:new_counter(),
+  oneup_counter_sup:start_counter(MetricName, CounterRef),
+  {?MODULE, CounterRef}.
 
 update(CounterRef)->
   oneup:inc(CounterRef).

@@ -43,7 +43,40 @@ init([MetricsMap]) ->
             restart => permanent,
             shutdown => 1000},
 
-    {ok, { RestartStrategy, [OneupMetricsServer]} }.
+    OneupCounterSup =
+        #{id => oneup_counter_sup,
+            start => {oneup_counter_sup, start_link, []},
+            type => supervisor,
+            restart => permanent,
+            shutdown => 1000},
+
+    OneupMeterSup =
+        #{id => oneup_meter_sup,
+            start => {oneup_meter_sup, start_link, []},
+            type => supervisor,
+            restart => permanent,
+            shutdown => 1000},
+
+    OneupGaugeSup =
+        #{id => oneup_gauge_sup,
+            start => {oneup_gauge_sup, start_link, []},
+            type => supervisor,
+            restart => permanent,
+            shutdown => 1000},
+
+    OneupHistogramSup =
+        #{id => oneup_histogram_sup,
+            start => {oneup_histogram_sup, start_link, []},
+            type => supervisor,
+            restart => permanent,
+            shutdown => 1000},
+
+    {ok, { RestartStrategy, [
+        OneupMetricsServer,
+        OneupCounterSup,
+        OneupMeterSup,
+        OneupGaugeSup,
+        OneupHistogramSup]} }.
 
 %%====================================================================
 %% Internal functions
