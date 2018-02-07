@@ -102,7 +102,7 @@ test_metric_updates(Config)->
 
 test_metric_add(Config)->
   NewMetric = [x,y,z],
-  oneup_metrics:add_metric({oneup_counter, NewMetric}),
+  oneup_metrics:add_metric({oneup_counter, NewMetric}, oneup_metrics:initial_get_config()),
   ModifiedMetricsMap = oneup_metrics:initial_get_config(),
   ct:print("ModifiedMetricsMap: ~p", [ModifiedMetricsMap]),
   #{x := #{y := #{z := NewCounter}}} = ModifiedMetricsMap,

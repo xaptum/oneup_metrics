@@ -18,6 +18,15 @@
 start(_StartType, _StartArgs) ->
   {ok, MetricsConfig} = application:get_env(metrics_config),
 
+  {ok, _Pid} = oneup_counter_sup:start_link(),
+  lager:info("Started oneup_counter_sup"),
+  {ok, _Pid} = oneup_meter_sup:start_link(),
+  lager:info("Started oneup_meter_sup"),
+  {ok, _Pid} = oneup_histogram_sup:start_link(),
+  lager:info("Started oneup_histogram_sup"),
+  {ok, _Pid} = oneup_gauge_sup:start_link(),
+  lager:info("Started oneup_gauge_sup"),
+
   MetricsMap = oneup_metrics:init_from_config(MetricsConfig),
 
   maybe_start_http_reporters(),
