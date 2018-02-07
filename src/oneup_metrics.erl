@@ -55,7 +55,9 @@
 -callback update(Counters :: counters(), Value :: number()) -> Response :: any().
 
 %% update with one
--callback update(Metric :: counters()) -> Response :: any().
+-callback update(Counters :: counters()) -> Response :: any().
+
+-callback display(MetricName :: metric_name(), Counters :: counters()) -> Response :: string().
 
 %%%===================================================================
 %%% API
@@ -191,6 +193,18 @@ update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
   MetricType:update(CounterRef, Value).
 
 
+update_metric(MetricsMap, MetricName) when is_map(MetricsMap) ->
+  case get_counter(MetricsMap, MetricName) of
+    {error, uninitialized} -> lager:warning("Requesting uninitialized metric ~p", [MetricName]);
+    {MetricType, Counters} -> update({MetricType, Counters})
+  end.
+
+update_metric(MetricsMap, MetricName, Value) when is_map(MetricsMap)->
+  case get_counter(MetricsMap, MetricName) of
+    {error, uninitialized} -> lager:warning("Requesting uninitialized metric ~p", [MetricName]);
+    {MetricType, Counters} -> update({MetricType, Counters}, Value)
+  end.
+
 get_counter(Metric)->
   get_counter(config(), Metric).
 
@@ -235,23 +249,17 @@ reset_counter(MetricName, {Type, CounterRef}) when is_reference(CounterRef) ->
 reset_counter(_MetricName, Val) when is_map(Val)->
   reset_counters(Val).
 
+display_metric_name(MetricName)->
+  string:join([atom_to_list(Element) || Element <- MetricName], ".").
 
-%% TODO make it part of metric gen_servers
-display_counters(CounterRef) when is_reference(CounterRef) ->
-  integer_to_binary(oneup:get(CounterRef));
 display_counters(MetricsMap) when is_map(MetricsMap)->
   list_to_binary(display_counters(MetricsMap, "", [])).
 
-display_counters(MetricsMap, Body, CurrMetric) ->
-  maps:fold(fun(Key, Val, Acc) -> display_counter(Key, Val, Acc, CurrMetric) end, Body, MetricsMap).
+display_counters(MetricsMap, Body, CurrMetricPrefix) ->
+  maps:fold(fun(Key, Val, Acc) -> display_counter(Key, Val, Acc, CurrMetricPrefix) end, Body, MetricsMap).
 
-display_counter(Key, Val, Body, CurrMetric) when is_reference(Val) ->
-  CurrMetricDisplay =
-    case string:join(lists:reverse(CurrMetric), ".") of
-      "" -> "";
-      NotEmpty when length(NotEmpty) > 0 -> NotEmpty ++ "."
-    end,
-  Body ++ CurrMetricDisplay ++ atom_to_list(Key) ++ ": " ++ integer_to_list(oneup:get(Val)) ++ "\n";
-display_counter(Key, Val, Body, CurrMetric) when is_map(Val)->
-  display_counters(Val, Body, [atom_to_list(Key) | CurrMetric]).
+display_counter(Key, {MetricType, Counters}, Body, CurrMetricPrefix)  ->
+  Body ++ MetricType:display(CurrMetricPrefix ++ [Key], Counters);
+display_counter(Key, Val, Body, CurrMetricPrefix) when is_map(Val)->
+  display_counters(Val, Body, CurrMetricPrefix ++ [Key]).
 

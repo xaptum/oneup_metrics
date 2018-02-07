@@ -23,7 +23,8 @@
 -export([
   init_metric/1,
   update/1,
-  update/2]).
+  update/2,
+  display/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -61,6 +62,10 @@ update([ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounter
   oneup:inc(OccurenceCounterRef),
   oneup:set_min(MinCounterRef, Value),
   oneup:set_max(MaxCounterRef, Value).
+
+
+display(MetricName, Counters)->
+  "ok".
 
 %%%===================================================================
 %%% gen_server API

@@ -18,7 +18,8 @@
   start_link/2,
   init_metric/1,
   update/1,
-  update/2]).
+  update/2,
+  display/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -42,6 +43,9 @@ update(CounterRef)->
 
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
+
+display(MetricName, Counters)->
+    "ok".
 
 %%%===================================================================
 %%% gen_server API

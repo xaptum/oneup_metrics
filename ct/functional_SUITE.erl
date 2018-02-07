@@ -50,8 +50,9 @@ all() -> [
 init_per_suite(Config) ->
   application:ensure_all_started(lager),
   application:ensure_all_started(oneup_metrics),
-  ct:print("loaded apps: ~p", [application:loaded_applications()]),
-  true = lists:member({cowboy,"Small, fast, modern HTTP server.","2.2.0"}, application:loaded_applications()),
+  LoadedApplications = application:loaded_applications(),
+  ct:print("loaded apps: ~p", [LoadedApplications]),
+  true = lists:member({cowboy,"Small, fast, modern HTTP server.","2.2.0"}, LoadedApplications),
   Config.
 
 init_per_group(_, Config) ->

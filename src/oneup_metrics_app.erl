@@ -18,14 +18,14 @@
 start(_StartType, _StartArgs) ->
   {ok, MetricsConfig} = application:get_env(metrics_config),
 
-  {ok, _Pid} = oneup_counter_sup:start_link(),
-  lager:info("Started oneup_counter_sup"),
-  {ok, _Pid} = oneup_meter_sup:start_link(),
-  lager:info("Started oneup_meter_sup"),
-  {ok, _Pid} = oneup_histogram_sup:start_link(),
-  lager:info("Started oneup_histogram_sup"),
-  {ok, _Pid} = oneup_gauge_sup:start_link(),
-  lager:info("Started oneup_gauge_sup"),
+  RespCnt = oneup_counter_sup:start_link(),
+  lager:info("oneup_counter_sup: ~p", [RespCnt]),
+  RespMeter = oneup_meter_sup:start_link(),
+  lager:info("oneup_meter_sup: ~p", [RespMeter]),
+  RespHisto = oneup_histogram_sup:start_link(),
+  lager:info("Started oneup_histogram_sup", [RespHisto]),
+  RespGauge = oneup_gauge_sup:start_link(),
+  lager:info("Started oneup_gauge_sup", [RespGauge]),
 
   MetricsMap = oneup_metrics:init_from_config(MetricsConfig),
 
