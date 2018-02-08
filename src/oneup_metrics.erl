@@ -82,9 +82,6 @@ enable(MetricsMap)->
 enable(Prefix, MetricsMap)->
   put(?METRICS_MAP, get_metrics(MetricsMap, Prefix)).
 
-%%TODO reset()->
-%%  ok = gen_server:call(?SERVER, reset).
-
 add_multiple(NewMetrics)->
   {ok, _ExpandedMetrics} = gen_server:call(?SERVER, {add_multiple, NewMetrics}).
 
@@ -180,7 +177,7 @@ add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
   end.
 
 
-get(MetricName) ->
+get_value(MetricName) ->
   gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), get).
 
 reset(MetricName) ->
@@ -194,41 +191,45 @@ update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
 
 
 update_metric(MetricsMap, MetricName) when is_map(MetricsMap) ->
-  case get_counter(MetricsMap, MetricName) of
+  case get_metric(MetricsMap, MetricName) of
     {error, uninitialized} -> lager:warning("Requesting uninitialized metric ~p", [MetricName]);
     {MetricType, Counters} -> update({MetricType, Counters})
   end.
 
 update_metric(MetricsMap, MetricName, Value) when is_map(MetricsMap)->
-  case get_counter(MetricsMap, MetricName) of
+  case get_metric(MetricsMap, MetricName) of
     {error, uninitialized} -> lager:warning("Requesting uninitialized metric ~p", [MetricName]);
     {MetricType, Counters} -> update({MetricType, Counters}, Value)
   end.
 
-get_counter(Metric)->
-  get_counter(config(), Metric).
+get_metric(Metric)->
+  get_metric(config(), Metric).
 
-get_counter(Metrics, [Metric]) ->
+get_metric(Metrics, [Metric]) ->
   case Metrics of
     #{Metric := {MetricType, CounterRef}} when is_atom(MetricType) -> {MetricType, CounterRef};
     _-> {error, uninitialized}
   end;
-get_counter(Metrics, [Head | Tail])->
+get_metric(Metrics, [Head | Tail])->
   case Metrics of
-    #{Head := NestedMetric} -> get_counter(NestedMetric, Tail);
+    #{Head := NestedMetric} -> get_metric(NestedMetric, Tail);
     _-> {error, uninitialized}
   end.
 
-get_metric(Metric)->
-  {Type, CounterRef} = get_counter(Metric),
-  Type:get(CounterRef).
+get_metric_values(Metric)->
+  get_metric_values(config(), Metric).
 
-get_metric(Metrics, Metric)->
-  {Type, CounterRef} = get_counter(Metrics, Metric),
-  Type:get(CounterRef).
+get_metric_values(Metrics, [Metric]) ->
+  case Metrics of
+    #{Metric := {MetricType, CounterRef}} when is_atom(MetricType) -> oneup_metrics:get_value(Metric);
+    _-> {error, uninitialized}
+  end;
+get_metric_values(Metrics, [Head | Tail])->
+  case Metrics of
+    #{Head := NestedMetric} -> get_metric_values(NestedMetric, Tail);
+    _-> {error, uninitialized}
+  end.
 
-
-%% Get entire nested map
 get_metrics(Metrics, [Metric]) ->
   case Metrics of
     #{Metric := ExpectedMetric} -> ExpectedMetric;
@@ -259,7 +260,8 @@ display_counters(MetricsMap, Body, CurrMetricPrefix) ->
   maps:fold(fun(Key, Val, Acc) -> display_counter(Key, Val, Acc, CurrMetricPrefix) end, Body, MetricsMap).
 
 display_counter(Key, {MetricType, Counters}, Body, CurrMetricPrefix)  ->
-  Body ++ MetricType:display(CurrMetricPrefix ++ [Key], Counters);
+  MetricName = CurrMetricPrefix ++ [Key],
+  Body ++ display_metric_name(MetricName) ++ ": " ++ MetricType:display(MetricName, Counters) ++ "\n";
 display_counter(Key, Val, Body, CurrMetricPrefix) when is_map(Val)->
   display_counters(Val, Body, CurrMetricPrefix ++ [Key]).
 

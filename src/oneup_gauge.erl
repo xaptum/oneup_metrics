@@ -12,6 +12,9 @@
 -behaviour(gen_server).
 -behaviour(oneup_metrics).
 
+%% API
+-export([start_link/2]).
+
 %% oneup_metrics callbacks
 -export([
   init_metric/1,
@@ -38,6 +41,7 @@
 
 init_metric(MetricName)->
   Gauge = oneup:new_counter(),
+  lager:info("Starting gauge ~p", [MetricName]),
   oneup_gauge_sup:start_gauge(MetricName, Gauge),
   {?MODULE, Gauge}.
 

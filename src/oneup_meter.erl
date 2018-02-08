@@ -12,7 +12,7 @@
 -behaviour(gen_server).
 -behaviour(oneup_metrics).
 
-%% gen_server callbacks
+%% API
 -export([start_link/2]).
 
 %% oneup_metrics callbacks
@@ -86,8 +86,8 @@ init([CounterRef]) ->
   erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
   {ok, #state{counter = CounterRef}}.
 
-handle_call(get, _From, State) ->
-  {reply, ok, State}.
+handle_call(get, _From, #state{counter = CounterRef} = State) ->
+  {reply, CounterRef, State}.
 
 handle_cast(_Request, State) ->
   {noreply, State}.

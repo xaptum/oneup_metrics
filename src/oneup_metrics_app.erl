@@ -23,9 +23,9 @@ start(_StartType, _StartArgs) ->
   RespMeter = oneup_meter_sup:start_link(),
   lager:info("oneup_meter_sup: ~p", [RespMeter]),
   RespHisto = oneup_histogram_sup:start_link(),
-  lager:info("Started oneup_histogram_sup", [RespHisto]),
+  lager:info("oneup_histogram_sup: ~p", [RespHisto]),
   RespGauge = oneup_gauge_sup:start_link(),
-  lager:info("Started oneup_gauge_sup", [RespGauge]),
+  lager:info("oneup_gauge_sup: ~p", [RespGauge]),
 
   MetricsMap = oneup_metrics:init_from_config(MetricsConfig),
 

@@ -52,7 +52,6 @@ init_per_suite(Config) ->
   application:ensure_all_started(oneup_metrics),
   LoadedApplications = application:loaded_applications(),
   ct:print("loaded apps: ~p", [LoadedApplications]),
-  true = lists:member({cowboy,"Small, fast, modern HTTP server.","2.2.0"}, LoadedApplications),
   Config.
 
 init_per_group(_, Config) ->
@@ -90,15 +89,15 @@ test_metric_updates(Config)->
   InitializedMetricsMap = oneup_metrics:initial_get_config(),
   oneup_metrics:enable(InitializedMetricsMap),
   [oneup_metrics:update(Metric) || Metric <- ?TEST_CONFIG],
-  [1 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
+  [1 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
   [oneup_metrics:update(Metric) || Metric <- ?TEST_CONFIG],
-  [2 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
+  [2 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
   [oneup_metrics:update(Metric, 2) || Metric <- ?TEST_CONFIG],
-  [4 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
+  [4 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
   [oneup_metrics:reset(Metric) || Metric <- ?TEST_CONFIG],
-  [0 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
+  [0 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
   [oneup_metrics:set(Metric, 10) || Metric <- ?TEST_CONFIG],
-  [10 = oneup_metrics:get(Metric) || Metric <- ?TEST_CONFIG],
+  [10 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
   Config.
 
 test_metric_add(Config)->
@@ -110,7 +109,7 @@ test_metric_add(Config)->
   0 = oneup:get(NewCounter),
   oneup_metrics:enable(ModifiedMetricsMap),
   oneup_metrics:update(NewMetric),
-  1 = oneup_metrics:get(NewMetric),
+  1 = oneup_metrics:get_value(NewMetric),
   Config.
 
 test_metric_add_multiple(Config)->
@@ -120,7 +119,7 @@ test_metric_add_multiple(Config)->
   ct:print("MultiAddedMetricsMap ~p", [MultiAddedMetricsMap]),
   oneup_metrics:enable(MultiAddedMetricsMap),
   [oneup_metrics:update(Metric, 1000000) || Metric <- NewMetrics],
-  [1000000 = oneup_metrics:get(Metric) || Metric <- NewMetrics],
+  [1000000 = oneup_metrics:get_value(Metric) || Metric <- NewMetrics],
 
   {ok, HttpPort} = application:get_env(oneup_metrics, http_port),
 

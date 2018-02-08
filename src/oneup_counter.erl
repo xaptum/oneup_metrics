@@ -14,8 +14,10 @@
 
 
 %% API
+-export([start_link/2]).
+
+%% oneup_metrics callbacks
 -export([
-  start_link/2,
   init_metric/1,
   update/1,
   update/2,
@@ -39,7 +41,7 @@ init_metric(MetricName)->
   {?MODULE, CounterRef}.
 
 update(CounterRef)->
-  oneup:inc(CounterRef).
+   oneup:inc(CounterRef).
 
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
