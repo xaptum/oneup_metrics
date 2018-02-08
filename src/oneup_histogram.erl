@@ -87,7 +87,7 @@ handle_call(get, _From, #state{prev_value = PrevAggrValue, prev_samples = PrevSa
   Min = oneup:get(MinRef),
   Max = oneup:get(MaxRef),
   {reply, {Samples, Mean, Min, Max}, State};
-handle_call(reset, _From, #state{prev_value = PrevAggrValue, prev_samples = PrevSamples,value_aggr = ValueAggregateCounterRef, samples = SampleCounterRef, min = MinRef, max = MaxRef} = State) ->
+handle_call(reset, _From, #state{value_aggr = ValueAggregateCounterRef, samples = SampleCounterRef, min = MinRef, max = MaxRef} = State) ->
   oneup:set(SampleCounterRef, 0),
   oneup:set(ValueAggregateCounterRef, 0),
   oneup:set(MinRef, ?UNDEFINED_MIN),

@@ -88,24 +88,25 @@ test_system_info_reporter(Config)->
 test_metric_updates(Config)->
   InitializedMetricsMap = oneup_metrics:initial_get_config(),
   oneup_metrics:enable(InitializedMetricsMap),
-  [oneup_metrics:update(Metric) || Metric <- ?TEST_CONFIG],
-  [1 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
-  [oneup_metrics:update(Metric) || Metric <- ?TEST_CONFIG],
-  [2 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
-  [oneup_metrics:update(Metric, 2) || Metric <- ?TEST_CONFIG],
-  [4 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
-  [oneup_metrics:reset(Metric) || Metric <- ?TEST_CONFIG],
-  [0 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
-  [oneup_metrics:set(Metric, 10) || Metric <- ?TEST_CONFIG],
-  [10 = oneup_metrics:get_value(Metric) || Metric <- ?TEST_CONFIG],
+  CounterNames = proplists:get_value(oneup_counter, ?TEST_CONFIG),
+  [oneup_metrics:update(Metric) || Metric <- CounterNames],
+  [1 = oneup_metrics:get_value(Metric) || {oneup_counter, Metric}  <- CounterNames],
+  [oneup_metrics:update(Metric) || Metric <- CounterNames],
+  [2 = oneup_metrics:get_value(Metric) || Metric <- CounterNames],
+  [oneup_metrics:update(Metric, 2) || Metric <- CounterNames],
+  [4 = oneup_metrics:get_value(Metric) || Metric <- CounterNames],
+  [oneup_metrics:reset(Metric) || Metric <- CounterNames],
+  [0 = oneup_metrics:get_value(Metric) || Metric <- CounterNames],
+  [oneup_metrics:update(Metric, 10) || Metric <- CounterNames],
+  [10 = oneup_metrics:get_value(Metric) || Metric <- CounterNames],
   Config.
 
 test_metric_add(Config)->
   NewMetric = [x,y,z],
-  oneup_metrics:add_metric({oneup_counter, NewMetric}, oneup_metrics:initial_get_config()),
+  {ok, ModifiedMetricsMap} = oneup_metrics:add({oneup_counter, NewMetric}),
   ModifiedMetricsMap = oneup_metrics:initial_get_config(),
   ct:print("ModifiedMetricsMap: ~p", [ModifiedMetricsMap]),
-  #{x := #{y := #{z := NewCounter}}} = ModifiedMetricsMap,
+  #{x := #{y := #{z := {oneup_counter, NewCounter}}}} = ModifiedMetricsMap,
   0 = oneup:get(NewCounter),
   oneup_metrics:enable(ModifiedMetricsMap),
   oneup_metrics:update(NewMetric),
@@ -114,12 +115,19 @@ test_metric_add(Config)->
 
 test_metric_add_multiple(Config)->
   NewMetrics = [[x,y,z1],[x,y,z2],[k,l,m]],
-  oneup_metrics:add_multiple(NewMetrics),
+  NewMetricsConfig = {oneup_meter, NewMetrics},
+  {ok, MultiAddedMetricsMap} = oneup_metrics:add_multiple(NewMetricsConfig),
   MultiAddedMetricsMap = oneup_metrics:initial_get_config(),
   ct:print("MultiAddedMetricsMap ~p", [MultiAddedMetricsMap]),
   oneup_metrics:enable(MultiAddedMetricsMap),
   [oneup_metrics:update(Metric, 1000000) || Metric <- NewMetrics],
-  [1000000 = oneup_metrics:get_value(Metric) || Metric <- NewMetrics],
+  timer:sleep(10000), %% make sure at least one aggregation happens after
+  [fun() ->
+    {oneup_meter, CounterRef} = oneup_metrics:get_metric(Metric),
+    1000000 = oneup:get(CounterRef),
+    [Instant, One, Five, Fifteen, Hour, Day] = oneup_metrics:get_value(Metric),
+    ct:print("inst: ~p, 1m: ~p, 5m: ~p, 15m: ~p, hour: ~p, day: ~p~n",
+      [Instant, One, Five, Fifteen, Hour, Day]) end || Metric <- NewMetrics],
 
   {ok, HttpPort} = application:get_env(oneup_metrics, http_port),
 

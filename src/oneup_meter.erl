@@ -65,7 +65,7 @@ start_link(MetricName, CounterRef) ->
 %%%===================================================================
 
 init_metric(MetricName)->
-  Counter = {oneup:new_counter()},
+  Counter = oneup:new_counter(),
   oneup_meter_sup:start_meter(MetricName, Counter),
   {?MODULE, Counter}.
 
@@ -86,8 +86,18 @@ init([CounterRef]) ->
   erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
   {ok, #state{counter = CounterRef}}.
 
-handle_call(get, _From, #state{counter = CounterRef} = State) ->
-  {reply, CounterRef, State}.
+handle_call(get, _From, #state{
+  counter = CounterRef,
+  instant_rate = InstantRate,
+  one_minute_rate = OneMinRate,
+  five_minute_rate = FiveMinRate,
+  fifteen_minute_rate = FifteenMinRate,
+  hour_rate = HourRate,
+  day_rate = DayRate} = State) ->
+
+  Ret = [InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
+
+  {reply, Ret, State}.
 
 handle_cast(_Request, State) ->
   {noreply, State}.

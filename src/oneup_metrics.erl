@@ -83,10 +83,10 @@ enable(Prefix, MetricsMap)->
   put(?METRICS_MAP, get_metrics(MetricsMap, Prefix)).
 
 add_multiple(NewMetrics)->
-  {ok, _ExpandedMetrics} = gen_server:call(?SERVER, {add_multiple, NewMetrics}).
+  gen_server:call(?SERVER, {add_multiple, NewMetrics}).
 
 add(NewMetric) ->
-  {ok, _ExpandedMetrics} = gen_server:call(?SERVER, {add, NewMetric}).
+  gen_server:call(?SERVER, {add, NewMetric}).
 
 
 start_link(MetricsMap) ->
@@ -184,10 +184,20 @@ reset(MetricName) ->
   gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), reset).
 
 update({MetricType, CounterRef}) when is_atom(MetricType)->
-  MetricType:update(CounterRef).
+  MetricType:update(CounterRef);
+update(MetricName) when is_list(MetricName)->
+  case get_metric(MetricName) of
+    {error, Error} -> lager:error("Error getting metric ~p: ~p", [MetricName, Error]);
+    {Type, CounterRefs} -> update({Type, CounterRefs})
+  end.
 
 update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
-  MetricType:update(CounterRef, Value).
+  MetricType:update(CounterRef, Value);
+update(MetricName, Value) when is_list(MetricName)->
+  case get_metric(MetricName) of
+    {error, Error} -> lager:error("Error getting metric ~p: ~p", [MetricName, Error]);
+    {Type, CounterRefs} -> update({Type, CounterRefs}, Value)
+  end.
 
 
 update_metric(MetricsMap, MetricName) when is_map(MetricsMap) ->
