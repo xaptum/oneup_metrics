@@ -20,7 +20,7 @@
   init_metric/1,
   update/1,
   update/2,
-  display/2]).
+  header/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -32,7 +32,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {gauge}).
+-record(state, {gauge, display_name}).
 
 
 %%%===================================================================
@@ -52,27 +52,32 @@ update(CounterRef)->
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:set(CounterRef, Value).
 
-display(MetricName, Counters)->
-  "ok".
+header()->
+  lists:flatten(io_lib:format("~-15s~-51s~-20s~n", ["gauge", "", "value"])).
 
 %%%===================================================================
 %%% gen_server API
 %%%===================================================================
 
 start_link(MetricName, GaugeRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [GaugeRef], []).
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, GaugeRef], []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-init([GaugeRef]) ->
-  {ok, #state{gauge = GaugeRef}}.
+init([MetricName, GaugeRef]) ->
+  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
+  {ok, #state{gauge = GaugeRef, display_name = DisplayName}}.
 
 handle_call(get, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:get(GaugeRef), State};
 handle_call(reset, _From, #state{gauge = GaugeRef} = State) ->
-  {reply, oneup:set(GaugeRef, 0), State}.
+  {reply, oneup:set(GaugeRef, 0), State};
+handle_call(display, _From, #state{gauge = GaugeRef, display_name = DisplayName} = State) ->
+  CounterValue = integer_to_list(oneup:get(GaugeRef)),
+  DisplayString = io_lib:format("~-15s~-50s:~-20b~n", ["gauge", DisplayName, CounterValue]),
+  {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->
   {noreply, State}.

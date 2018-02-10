@@ -24,7 +24,7 @@
   init_metric/1,
   update/1,
   update/2,
-  display/2]).
+  header/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -36,7 +36,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {prev_value = 0, prev_samples = 0, value_aggr, samples, min, max}).
+-record(state, {display_name, prev_value = 0, prev_samples = 0, value_aggr, samples, min, max}).
 
 %%%===================================================================
 %%% oneup_metrics API
@@ -63,23 +63,24 @@ update([ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounter
   oneup:set_min(MinCounterRef, Value),
   oneup:set_max(MaxCounterRef, Value).
 
-
-display(MetricName, Counters)->
-  "ok".
+header()->
+  lists:flatten(io_lib:format("~-15s~-51s~-20s~-20s~-20s~-20s~n",
+    ["histogram", "", "samples", "min", "mean", "max"])).
 
 %%%===================================================================
 %%% gen_server API
 %%%===================================================================
 
 start_link(MetricName, Counters) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [Counters], []).
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, Counters], []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
-init([[ValueAggregateCounterRef, OccurenceCounterRef, MinRef, MaxRef]]) ->
+init([MetricName, [ValueAggregateCounterRef, OccurenceCounterRef, MinRef, MaxRef]]) ->
+  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
   erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
-  {ok, #state{value_aggr = ValueAggregateCounterRef, samples = OccurenceCounterRef, min = MinRef, max = MaxRef}}.
+  {ok, #state{display_name = DisplayName, value_aggr = ValueAggregateCounterRef, samples = OccurenceCounterRef, min = MinRef, max = MaxRef}}.
 
 handle_call(get, _From, #state{prev_value = PrevAggrValue, prev_samples = PrevSamples,value_aggr = ValueAggregateCounterRef, samples = SampleCounterRef, min = MinRef, max = MaxRef} = State) ->
   Samples = oneup:get(SampleCounterRef),
@@ -92,7 +93,19 @@ handle_call(reset, _From, #state{value_aggr = ValueAggregateCounterRef, samples 
   oneup:set(ValueAggregateCounterRef, 0),
   oneup:set(MinRef, ?UNDEFINED_MIN),
   oneup:set(MaxRef, 0),
-  {reply, ok, State#state{prev_value = 0, prev_samples = 0}}.
+  {reply, ok, State#state{prev_value = 0, prev_samples = 0}};
+handle_call(display, _From, #state{
+  prev_value = PrevValueAvg,   prev_samples = PrevSamples,
+  value_aggr = CurrValueAggrRef,  samples = CurrSamples,
+  min = Min, max = Max,
+  display_name = DisplayName} = State) ->
+  Samples = PrevSamples + oneup:get(CurrSamples),
+  Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
+  Mean = avg(Values, Samples),
+  DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s:~-20b~-20b~-20b~-20b~n",
+    ["histogram", DisplayName,
+      Samples, Min, Mean, Max])),
+  {reply, DisplayHistogram, State}.
 
 
 handle_cast(_Request, State) ->
@@ -128,10 +141,10 @@ min(?UNDEFINED_MIN)->
 min(MinValue)->
   MinValue.
 
-avg(Value, 0)->
+avg(_Value, 0)->
   0;
 avg(Value, Count) when Count > 0->
-  Value/Count.
+  round(Value/Count).
 
 collapse_decayed(Value, 0)->
   {0, 0};

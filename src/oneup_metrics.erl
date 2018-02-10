@@ -18,7 +18,10 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1]).
+-export([start_link/1,
+  get_value/1,
+  reset/1,
+  display/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -57,7 +60,7 @@
 %% update with one
 -callback update(Counters :: counters()) -> Response :: any().
 
--callback display(MetricName :: metric_name(), Counters :: counters()) -> Response :: string().
+-callback header()-> Response :: string().
 
 %%%===================================================================
 %%% API
@@ -183,6 +186,9 @@ get_value(MetricName) ->
 reset(MetricName) ->
   gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), reset).
 
+display(MetricName)->
+  gen_server:call(MetricName, display).
+
 update({MetricType, CounterRef}) when is_atom(MetricType)->
   MetricType:update(CounterRef);
 update(MetricName) when is_list(MetricName)->
@@ -260,18 +266,6 @@ reset_counter(MetricName, {Type, CounterRef}) when is_reference(CounterRef) ->
 reset_counter(_MetricName, Val) when is_map(Val)->
   reset_counters(Val).
 
-display_metric_name(MetricName)->
-  string:join([atom_to_list(Element) || Element <- MetricName], ".").
-
-display_counters(MetricsMap) when is_map(MetricsMap)->
-  list_to_binary(display_counters(MetricsMap, "", [])).
-
-display_counters(MetricsMap, Body, CurrMetricPrefix) ->
-  maps:fold(fun(Key, Val, Acc) -> display_counter(Key, Val, Acc, CurrMetricPrefix) end, Body, MetricsMap).
-
-display_counter(Key, {MetricType, Counters}, Body, CurrMetricPrefix)  ->
-  MetricName = CurrMetricPrefix ++ [Key],
-  Body ++ display_metric_name(MetricName) ++ ": " ++ MetricType:display(MetricName, Counters) ++ "\n";
-display_counter(Key, Val, Body, CurrMetricPrefix) when is_map(Val)->
-  display_counters(Val, Body, CurrMetricPrefix ++ [Key]).
-
+current_second() ->
+  {Mega, Sec, _Micro} = os:timestamp(),
+  (Mega * 1000000 + Sec).

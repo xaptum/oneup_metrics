@@ -21,7 +21,7 @@
   init_metric/1,
   update/1,
   update/2,
-  display/2]).
+  header/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -33,7 +33,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {counter}).
+-record(state, {counter, display_name}).
 
 init_metric(MetricName)->
   CounterRef = oneup:new_counter(),
@@ -46,28 +46,34 @@ update(CounterRef)->
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
-display(MetricName, Counters)->
-    "ok".
+header()->
+  lists:flatten(io_lib:format("~-15s~-51s~-20s~n", ["counter", "", "count"])).
+
 
 %%%===================================================================
 %%% gen_server API
 %%%===================================================================
 
 start_link(MetricName, CounterRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [CounterRef], []).
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, CounterRef], []).
 
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-init([CounterRef]) ->
-  {ok, #state{counter = CounterRef}}.
+init([MetricName, CounterRef]) ->
+  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
+  {ok, #state{counter = CounterRef, display_name = DisplayName}}.
 
 handle_call(get, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:get(CounterRef), State};
 handle_call(reset, _From, #state{counter = CounterRef} = State) ->
-  {reply, oneup:set(CounterRef, 0), State}.
+  {reply, oneup:set(CounterRef, 0), State};
+handle_call(display, _From, #state{counter = CounterRef, display_name = DisplayName} = State) ->
+  CounterValue = integer_to_list(oneup:get(CounterRef)),
+  DisplayString = io_lib:format("~-15s~-50s:~-20b~n", ["counter", DisplayName, CounterValue]),
+  {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->
   {noreply, State}.

@@ -20,7 +20,7 @@
   init_metric/1,
   update/1,
   update/2,
-  display/2]).
+  header/0]).
 
 
 %% gen_server callbacks
@@ -43,7 +43,11 @@
 -define(HOUR_MINUTES, 60).
 -define(DAY_MINUTES, ?HOUR_MINUTES * 24).
 
--record(state, {counter,
+-record(state, {
+  display_name,
+  counter,
+  start,
+  lifetime_total,
   instant_rate,
   one_minute_rate,
   five_minute_rate,
@@ -58,7 +62,7 @@
 %%%===================================================================
 
 start_link(MetricName, CounterRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [CounterRef], []).
+  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, CounterRef], []).
 
 %%%===================================================================
 %%% oneup_metrics callbacks
@@ -75,29 +79,40 @@ update(CounterRef)->
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
-display(MetricName, Counters)->
-  "ok".
+header()->
+  lists:flatten(io_lib:format("~-15s~-51s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
+    ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
+
+
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-init([CounterRef]) ->
+init([MetricName, CounterRef]) ->
   erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
-  {ok, #state{counter = CounterRef}}.
+  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
+  {ok, #state{display_name = DisplayName, counter = CounterRef, start = oneup_metrics:current_second()}}.
 
 handle_call(get, _From, #state{
   counter = CounterRef,
+  start = Start,
+  lifetime_total = LifetimeTotal,
   instant_rate = InstantRate,
   one_minute_rate = OneMinRate,
   five_minute_rate = FiveMinRate,
   fifteen_minute_rate = FifteenMinRate,
   hour_rate = HourRate,
   day_rate = DayRate} = State) ->
-
-  Ret = [InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
-
-  {reply, Ret, State}.
+  Counter = oneup:get(CounterRef),
+  Mean = LifetimeTotal / (oneup_metrics:current_second() - Start),
+  Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
+  {reply, Ret, State};
+handle_call(display, _From, #state{counter = CounterRef, display_name = DisplayName} = State) ->
+  [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = gen_server:call(self(), get),
+  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s:~-20b~-20b~-20b~-20b~-20b~-20b~-20b~-20b~n",
+    ["meter", DisplayName, Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
+  {reply, DisplayMeterValues, State}.
 
 handle_cast(_Request, State) ->
   {noreply, State}.
@@ -105,15 +120,16 @@ handle_cast(_Request, State) ->
 handle_info({timeout, _TimerRef, tick},
     #state{
       counter = CounterRef,
+      lifetime_total = LifetimeTotal,
       one_minute_rate = OneMinuteRate,
       five_minute_rate = FiveMinuteRate,
       fifteen_minute_rate = FifteenMinuteRate,
       hour_rate = HourRate,
       day_rate = DayRate} = State) ->
-  Count = oneup:get(CounterRef),
-  oneup_metrics:reset(CounterRef), %% reset
+  Count = oneup:set(CounterRef, 0),
   {noreply, State#state{
     instant_rate = Count / ?INTERVAL,
+    lifetime_total = LifetimeTotal + Count,
     one_minute_rate = tick(1, Count, OneMinuteRate),
     five_minute_rate = tick(5, Count, FiveMinuteRate),
     fifteen_minute_rate = tick(15, Count, FifteenMinuteRate),

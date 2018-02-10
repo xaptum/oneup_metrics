@@ -29,7 +29,7 @@ display_counters_test()->
   application:ensure_all_started(oneup_metrics),
 
   StatsMap = oneup_metrics:init_from_config(StatsConfig),
-  Body = oneup_metrics:display_counters(StatsMap),
+  Body = oneup_metrics_handler:display_metrics(StatsMap),
   ct:print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ ~nDisplayable stats ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [Body]).
 
 init_from_config_test() ->
