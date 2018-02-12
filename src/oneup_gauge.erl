@@ -53,7 +53,7 @@ update(CounterRef, Value) when is_integer(Value) ->
   oneup:set(CounterRef, Value).
 
 header()->
-  lists:flatten(io_lib:format("~-15s~-51s~-20s~n", ["gauge", "", "value"])).
+  lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["gauge", "", "value"])).
 
 %%%===================================================================
 %%% gen_server API
@@ -76,7 +76,7 @@ handle_call(reset, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:set(GaugeRef, 0), State};
 handle_call(display, _From, #state{gauge = GaugeRef, display_name = DisplayName} = State) ->
   CounterValue = oneup:get(GaugeRef),
-  DisplayString = io_lib:format("~-15s~-50s:~-20b~n", ["gauge", DisplayName, CounterValue]),
+  DisplayString = io_lib:format("~-15s~-50s~-20b~n", ["gauge", DisplayName, CounterValue]),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->

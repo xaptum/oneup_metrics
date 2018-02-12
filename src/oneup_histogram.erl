@@ -64,7 +64,7 @@ update([ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounter
   oneup:set_max(MaxCounterRef, Value).
 
 header()->
-  lists:flatten(io_lib:format("~-15s~-51s~-20s~-20s~-20s~-20s~n",
+  lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~n",
     ["histogram", "", "samples", "min", "mean", "max"])).
 
 %%%===================================================================
@@ -102,9 +102,9 @@ handle_call(display, _From, #state{
   Samples = PrevSamples + oneup:get(CurrSamples),
   Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
   Mean = avg(Values, Samples),
-  DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s:~-20b~-20b~-20b~-20b~n",
+  DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s~-20b~-20b~-20b~-20b~n",
     ["histogram", DisplayName,
-      Samples, oneup:get(Min), Mean, oneup:get(Max)])),
+      Samples, min(oneup:get(Min)), Mean, oneup:get(Max)])),
   {reply, DisplayHistogram, State}.
 
 

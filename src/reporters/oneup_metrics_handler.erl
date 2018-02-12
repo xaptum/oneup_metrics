@@ -70,7 +70,6 @@ display_metric_name(MetricName)->
 
 display_metrics(MetricsMap) when is_map(MetricsMap)->
   Body = header() ++ display_metrics(MetricsMap, "", []),
-  lager:info("Displaying ~p", [Body]),
   list_to_binary(Body).
 
 display_metrics(MetricsMap, Body, CurrMetricPrefix) ->
