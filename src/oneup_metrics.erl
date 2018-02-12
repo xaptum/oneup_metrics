@@ -186,7 +186,9 @@ get_value(MetricName) ->
 reset(MetricName) ->
   gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), reset).
 
-display(MetricName)->
+display(MetricName) when is_list(MetricName)->
+  display(metric_name_to_atom(MetricName));
+display(MetricName) when is_atom(MetricName)->
   gen_server:call(MetricName, display).
 
 update({MetricType, CounterRef}) when is_atom(MetricType)->

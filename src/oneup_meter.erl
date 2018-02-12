@@ -47,7 +47,7 @@
   display_name,
   counter,
   start,
-  lifetime_total,
+  lifetime_total = 0,
   instant_rate,
   one_minute_rate,
   five_minute_rate,

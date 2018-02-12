@@ -78,7 +78,6 @@ display_metrics(MetricsMap, Body, CurrMetricPrefix) ->
 
 display_metric(Key, {MetricType, Counters}, Body, CurrMetricPrefix)  ->
   MetricName = CurrMetricPrefix ++ [Key],
-  lager:info("Displaying metric ~p", [MetricName]),
   Body ++ oneup_metrics:display(MetricName);
 display_metric(Key, Val, Body, CurrMetricPrefix) when is_map(Val)->
   display_metrics(Val, Body, CurrMetricPrefix ++ [Key]).

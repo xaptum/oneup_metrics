@@ -75,7 +75,7 @@ handle_call(get, _From, #state{gauge = GaugeRef} = State) ->
 handle_call(reset, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:set(GaugeRef, 0), State};
 handle_call(display, _From, #state{gauge = GaugeRef, display_name = DisplayName} = State) ->
-  CounterValue = integer_to_list(oneup:get(GaugeRef)),
+  CounterValue = oneup:get(GaugeRef),
   DisplayString = io_lib:format("~-15s~-50s:~-20b~n", ["gauge", DisplayName, CounterValue]),
   {reply, DisplayString, State}.
 
