@@ -84,7 +84,7 @@ init([MetricName, [ValueAggregateCounterRef, OccurenceCounterRef, MinRef, MaxRef
 
 handle_call(get, _From, #state{prev_value = PrevAggrValue, prev_samples = PrevSamples,value_aggr = ValueAggregateCounterRef, samples = SampleCounterRef, min = MinRef, max = MaxRef} = State) ->
   Samples = oneup:get(SampleCounterRef),
-  Mean = avg( (PrevAggrValue + prev_oneup:get(ValueAggregateCounterRef)), (PrevSamples + Samples)),
+  Mean = avg( (PrevAggrValue + oneup:get(ValueAggregateCounterRef)), (PrevSamples + Samples)),
   Min = oneup:get(MinRef),
   Max = oneup:get(MaxRef),
   {reply, {Samples, Mean, Min, Max}, State};
@@ -104,7 +104,7 @@ handle_call(display, _From, #state{
   Mean = avg(Values, Samples),
   DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s:~-20b~-20b~-20b~-20b~n",
     ["histogram", DisplayName,
-      Samples, Min, Mean, Max])),
+      Samples, oneup:get(Min), Mean, oneup:get(Max)])),
   {reply, DisplayHistogram, State}.
 
 

@@ -40,7 +40,7 @@ process_request(#{path_info := [<<"reset">>|PathBinTail]} = Req, [MetricsMap] = 
   RespBody = apply_to_metrics(PathBinTail, MetricsMap, fun oneup_metrics:reset_counters/1),
   {RespBody, Req, State};
 process_request(#{path_info := PathBinList} = Req, [MetricsMap] = State) when is_map(MetricsMap) ->
-  RespBody = apply_to_metrics(PathBinList, MetricsMap, fun oneup_metrics:display_counters/1),
+  RespBody = apply_to_metrics(PathBinList, MetricsMap, fun oneup_metrics_handler:display_metrics/1),
   {RespBody, Req, State}.
 
 apply_to_metrics(undefined, MetricsMap, Fun)->
@@ -69,7 +69,7 @@ display_metric_name(MetricName)->
   string:join([atom_to_list(Element) || Element <- MetricName], ".").
 
 display_metrics(MetricsMap) when is_map(MetricsMap)->
-  Body = display_metrics(MetricsMap, "", []),
+  Body = header() ++ display_metrics(MetricsMap, "", []),
   lager:info("Displaying ~p", [Body]),
   list_to_binary(Body).
 
