@@ -30,7 +30,19 @@ display_counters_test()->
 
   StatsMap = oneup_metrics:init_from_config(StatsConfig),
   Body = oneup_metrics_handler:display_metrics(StatsMap),
-  ct:print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ ~nDisplayable stats ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [Body]).
+  ct:print("@@@@@@@@@@@@ ~nFULL METRICS MAP:~n@@@@@@@@@@@@@@@@@@@@@@@@@@@~n ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [Body]),
+
+  SubMetricsMapA = oneup_metrics:get_sub_metrics(StatsMap, [a]),
+  SubMetricsBodyA = oneup_metrics_handler:display_metrics(SubMetricsMapA),
+  ct:print("@@@@@@@@@@@@ ~nMETRICS MAP a:~n@@@@@@@@@@@@@@@@@@@@@@@@@@@~n ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [SubMetricsBodyA]),
+
+
+  SubMetricsMapABC2 = oneup_metrics:get_sub_metrics(StatsMap, [a, b, c2]),
+  SubMetricsBodyABC2 = oneup_metrics_handler:display_metrics(SubMetricsMapABC2),
+  ct:print("@@@@@@@@@@@@ ~nMETRICS MAP a:~n@@@@@@@@@@@@@@@@@@@@@@@@@@@~n ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [SubMetricsBodyABC2]).
+
+
+
 
 init_from_config_test() ->
 
