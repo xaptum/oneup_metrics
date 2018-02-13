@@ -16,7 +16,7 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-  {ok, MetricsConfig} = application:get_env(metrics_config),
+  MetricsConfig = application:get_env(oneup_metrics, metrics_config, []),
 
   RespCnt = oneup_counter_sup:start_link(),
   lager:info("oneup_counter_sup: ~p", [RespCnt]),
