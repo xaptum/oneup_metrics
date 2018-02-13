@@ -106,7 +106,7 @@ test_metric_add(Config)->
   {ok, ModifiedMetricsMap} = oneup_metrics:add({oneup_counter, NewMetric}),
   ModifiedMetricsMap = oneup_metrics:initial_get_config(),
   ct:print("ModifiedMetricsMap: ~p", [ModifiedMetricsMap]),
-  #{x := #{y := #{z := {oneup_counter, NewCounter}}}} = ModifiedMetricsMap,
+  #{x := #{y := #{z := {oneup_counter, 'x.y.z', NewCounter}}}} = ModifiedMetricsMap,
   0 = oneup:get(NewCounter),
   oneup_metrics:enable(ModifiedMetricsMap),
   oneup_metrics:update(NewMetric),
@@ -132,7 +132,7 @@ test_metric_add_multiple(Config)->
   {ok, HttpPort} = application:get_env(oneup_metrics, http_port),
 
   CurlResult = os:cmd("curl -s localhost:" ++ integer_to_list(HttpPort)),
-  ct:print("CURL RESULT:~n~s", [CurlResult]),
+  ct:print("CURL RESULT test_metric_add_multiple():~n~s", [CurlResult]),
 
   CurlResult_X = os:cmd("curl -s localhost:" ++ integer_to_list(HttpPort) ++ "/x"),
   ct:print("X CURL RESULT:~n~s", [CurlResult_X]),

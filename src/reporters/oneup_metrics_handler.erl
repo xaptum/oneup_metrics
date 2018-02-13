@@ -50,7 +50,7 @@ apply_to_metrics([], MetricsMap, Fun)->
 apply_to_metrics(PathBinList, MetricsMap, Fun)->
     try [binary_to_existing_atom(P, utf8) || P <- PathBinList] of
       PathAtomList when is_list(PathAtomList) ->
-        case oneup_metrics:get_metrics(MetricsMap, PathAtomList) of
+        case oneup_metrics:get_sub_metrics(MetricsMap, PathAtomList) of
           SubMetricsMap -> Fun(SubMetricsMap);
           {error, uninitialized} -> <<"Resource unavailable ">>
         end;
@@ -69,14 +69,13 @@ display_metric_name(MetricName)->
   string:join([atom_to_list(Element) || Element <- MetricName], ".").
 
 display_metrics(MetricsMap) when is_map(MetricsMap)->
-  Body = header() ++ display_metrics(MetricsMap, "", []),
+  Body = header() ++ display_metrics(MetricsMap, ""),
   list_to_binary(Body).
 
-display_metrics(MetricsMap, Body, CurrMetricPrefix) ->
-  maps:fold(fun(Key, Val, Acc) -> display_metric(Key, Val, Acc, CurrMetricPrefix) end, Body, MetricsMap).
+display_metrics(MetricsMap, Body) ->
+  maps:fold(fun(_Key, Val, Acc) -> display_metric(Val, Acc) end, Body, MetricsMap).
 
-display_metric(Key, {MetricType, Counters}, Body, CurrMetricPrefix)  ->
-  MetricName = CurrMetricPrefix ++ [Key],
+display_metric({_MetricType, MetricName, _Counters}, Body)  ->
   Body ++ oneup_metrics:display(MetricName);
-display_metric(Key, Val, Body, CurrMetricPrefix) when is_map(Val)->
-  display_metrics(Val, Body, CurrMetricPrefix ++ [Key]).
+display_metric(Val, Body) when is_map(Val)->
+  display_metrics(Val, Body).

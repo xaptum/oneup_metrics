@@ -35,10 +35,13 @@
 
 -record(state, {counter, display_name}).
 
-init_metric(MetricName)->
+init_metric(MetricName) when is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
+  init_metric(MetricNameAtom);
+init_metric(MetricName) when is_atom(MetricName) ->
   CounterRef = oneup:new_counter(),
   oneup_counter_sup:start_counter(MetricName, CounterRef),
-  {?MODULE, CounterRef}.
+  {?MODULE, MetricName, CounterRef}.
 
 update(CounterRef)->
    oneup:inc(CounterRef).
@@ -55,7 +58,7 @@ header()->
 %%%===================================================================
 
 start_link(MetricName, CounterRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, CounterRef], []).
+  gen_server:start_link({local, MetricName}, ?MODULE, [MetricName, CounterRef], []).
 
 
 %%%===================================================================
@@ -63,8 +66,7 @@ start_link(MetricName, CounterRef) ->
 %%%===================================================================
 
 init([MetricName, CounterRef]) ->
-  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
-  {ok, #state{counter = CounterRef, display_name = DisplayName}}.
+  {ok, #state{counter = CounterRef, display_name = atom_to_list(MetricName)}}.
 
 handle_call(get, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:get(CounterRef), State};

@@ -42,7 +42,10 @@
 %%% oneup_metrics API
 %%%===================================================================
 
-init_metric(MetricName)->
+init_metric(MetricName) when is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
+  init_metric(MetricNameAtom);
+init_metric(MetricName) when is_atom(MetricName)->
   Counters = [
     _ValueAggregateCounterRef = oneup:new_counter(),
     _OccurenceCounterRef = oneup:new_counter(),
@@ -51,7 +54,7 @@ init_metric(MetricName)->
   ],
   oneup:set(MinCounterRef, ?UNDEFINED_MIN),
   oneup_histogram_sup:start_histogram(MetricName, Counters),
-  {?MODULE, Counters}.
+  {?MODULE, MetricName, Counters}.
 
 %% This method doesn't make much sense for histograms
 update(undefined) -> ok.
@@ -72,15 +75,14 @@ header()->
 %%%===================================================================
 
 start_link(MetricName, Counters) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, Counters], []).
+  gen_server:start_link({local, MetricName}, ?MODULE, [MetricName, Counters], []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 init([MetricName, [ValueAggregateCounterRef, OccurenceCounterRef, MinRef, MaxRef]]) ->
-  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
   erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
-  {ok, #state{display_name = DisplayName, value_aggr = ValueAggregateCounterRef, samples = OccurenceCounterRef, min = MinRef, max = MaxRef}}.
+  {ok, #state{display_name = atom_to_list(MetricName), value_aggr = ValueAggregateCounterRef, samples = OccurenceCounterRef, min = MinRef, max = MaxRef}}.
 
 handle_call(get, _From, #state{prev_value = PrevAggrValue, prev_samples = PrevSamples,value_aggr = ValueAggregateCounterRef, samples = SampleCounterRef, min = MinRef, max = MaxRef} = State) ->
   Samples = oneup:get(SampleCounterRef),

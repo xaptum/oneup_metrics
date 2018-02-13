@@ -38,7 +38,8 @@
 
 -type counters() :: reference() | [reference(), ... ].
 -type metric_module() :: atom().
--type metric() :: {metric_module(), counters()}.
+-type metric_gen_name() :: atom().
+-type metric() :: {metric_module(), metric_gen_name(), counters()}.
 -type metric_name() :: [atom(), ...].
 
 %% return one or more ref counters with implementing module name,
@@ -83,7 +84,7 @@ enable(MetricsMap)->
   put(?METRICS_MAP, MetricsMap).
 
 enable(Prefix, MetricsMap)->
-  put(?METRICS_MAP, get_metrics(MetricsMap, Prefix)).
+  put(?METRICS_MAP, get_sub_metrics(MetricsMap, Prefix)).
 
 add_multiple(NewMetrics)->
   gen_server:call(?SERVER, {add_multiple, NewMetrics}).
@@ -106,7 +107,7 @@ init([MetricsMap]) ->
 handle_call(metrics, _From, #state{metrics = Metrics} = State) ->
   {reply, {ok, Metrics}, State};
 handle_call({metrics, Prefix}, _From, #state{metrics = Metrics} = State) when is_list(Prefix) ->
-  SubMetrics = get_metrics(Metrics, Prefix),
+  SubMetrics = get_sub_metrics(Metrics, Prefix),
   {reply, {ok, SubMetrics}, State};
 handle_call({add, Metric}, _From, #state{ metrics = Metrics } = State)->
   ExpandedMetrics = add_metric(Metric, Metrics),
@@ -133,7 +134,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 metric_name_to_atom(MetricName)->
-  list_to_atom(string:join([atom_to_list(Part) || Part <- MetricName], "_")).
+  list_to_atom(string:join([atom_to_list(Part) || Part <- MetricName], ".")).
 
 
 %%% Metrics Map is expected to be in the process dictionary of any process that got it
@@ -164,7 +165,7 @@ add_metric({Type, Metric}, AllMetrics) when is_list(Metric)->
 %% Reached the end of metric-name list, initialize the metric
 add_nested_metric(Metrics, Metric, [Last], Type) when is_map(Metrics), is_atom(Type)->
   case Metrics of
-    #{Last := {Type, _ExistingCounter} } when is_atom(Type) ->
+    #{Last := {Type, _MetricName, _ExistingCounter} } when is_atom(Type) ->
       lager:error("Duplicate entry in metrics config: ~p!  Exiting...", [Metric]),
       true = false;
     _ ->
@@ -180,44 +181,50 @@ add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
   end.
 
 
-get_value(MetricName) ->
-  gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), get).
+get_value(MetricName) when is_list(MetricName)->
+  get_value(metric_name_to_atom(MetricName));
+get_value(MetricName) when is_atom(MetricName)->
+  gen_server:call(MetricName, get).
 
-reset(MetricName) ->
-  gen_server:call(oneup_metrics:metric_name_to_atom(MetricName), reset).
+reset(MetricName) when is_list(MetricName)->
+  reset(metric_name_to_atom(MetricName));
+reset(MetricName) when is_atom(MetricName)->
+  gen_server:call(MetricName, reset).
 
 display(MetricName) when is_list(MetricName)->
   display(metric_name_to_atom(MetricName));
 display(MetricName) when is_atom(MetricName)->
   gen_server:call(MetricName, display).
 
-update({MetricType, CounterRef}) when is_atom(MetricType)->
-  MetricType:update(CounterRef);
+update({Type, CounterRef}) when is_atom(Type)->
+  Type:update(CounterRef);
 update(MetricName) when is_list(MetricName)->
   case get_metric(MetricName) of
     {error, Error} -> lager:error("Error getting metric ~p: ~p", [MetricName, Error]);
-    {Type, CounterRefs} -> update({Type, CounterRefs})
-  end.
+    {Type, _MetricName, CounterRefs} -> update({Type, CounterRefs})
+  end;
+update(Unexpected)->
+  lager:error("Unexpected arg in update: ~p", [Unexpected]).
 
 update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
   MetricType:update(CounterRef, Value);
 update(MetricName, Value) when is_list(MetricName)->
   case get_metric(MetricName) of
     {error, Error} -> lager:error("Error getting metric ~p: ~p", [MetricName, Error]);
-    {Type, CounterRefs} -> update({Type, CounterRefs}, Value)
+    {Type, _MetricName, CounterRefs} -> update({Type, CounterRefs}, Value)
   end.
 
 
 update_metric(MetricsMap, MetricName) when is_map(MetricsMap) ->
   case get_metric(MetricsMap, MetricName) of
     {error, uninitialized} -> lager:warning("Requesting uninitialized metric ~p", [MetricName]);
-    {MetricType, Counters} -> update({MetricType, Counters})
+    {Type, _MetricName, Counters} -> update({Type, Counters})
   end.
 
 update_metric(MetricsMap, MetricName, Value) when is_map(MetricsMap)->
   case get_metric(MetricsMap, MetricName) of
     {error, uninitialized} -> lager:warning("Requesting uninitialized metric ~p", [MetricName]);
-    {MetricType, Counters} -> update({MetricType, Counters}, Value)
+    {Type, _MetricName, Counters} -> update({Type, Counters}, Value)
   end.
 
 get_metric(Metric)->
@@ -225,7 +232,7 @@ get_metric(Metric)->
 
 get_metric(Metrics, [Metric]) ->
   case Metrics of
-    #{Metric := {MetricType, CounterRef}} when is_atom(MetricType) -> {MetricType, CounterRef};
+    #{Metric := {MetricType, MetricName, CounterRef}} when is_atom(MetricType) -> {MetricType, MetricName, CounterRef};
     _-> {error, uninitialized}
   end;
 get_metric(Metrics, [Head | Tail])->
@@ -239,7 +246,7 @@ get_metric_values(Metric)->
 
 get_metric_values(Metrics, [Metric]) ->
   case Metrics of
-    #{Metric := {MetricType, CounterRef}} when is_atom(MetricType) -> oneup_metrics:get_value(Metric);
+    #{Metric := {_MetricType, MetricName, _CounterRef}} -> oneup_metrics:get_value(MetricName);
     _-> {error, uninitialized}
   end;
 get_metric_values(Metrics, [Head | Tail])->
@@ -248,24 +255,23 @@ get_metric_values(Metrics, [Head | Tail])->
     _-> {error, uninitialized}
   end.
 
-get_metrics(Metrics, [Metric]) ->
+get_sub_metrics(Metrics, [Metric]) ->
   case Metrics of
     #{Metric := ExpectedMetric} -> ExpectedMetric;
     _-> {error, uninitialized}
   end;
-get_metrics(Metrics, [Head | Tail])->
+get_sub_metrics(Metrics, [Head | Tail])->
   case Metrics of
-    #{Head := NestedMetric} -> get_metrics(NestedMetric, Tail);
+    #{Head := NestedMetric} -> get_sub_metrics(NestedMetric, Tail);
     _-> {error, uninitialized}
   end.
 
-
 reset_counters(MetricsMap) ->
-  maps:fold(fun(Key, Val, _Acc) -> reset_counter(Key, Val) end, 'N/A', MetricsMap).
+  maps:fold(fun(_Key, Val, _Acc) -> reset_counter(Val) end, 'N/A', MetricsMap).
 
-reset_counter(MetricName, {Type, CounterRef}) when is_reference(CounterRef) ->
+reset_counter({Type, MetricName, _CounterRef}) when is_atom(Type) ->
   reset(MetricName);
-reset_counter(_MetricName, Val) when is_map(Val)->
+reset_counter(Val) when is_map(Val)->
   reset_counters(Val).
 
 current_second() ->

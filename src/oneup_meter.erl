@@ -61,17 +61,20 @@
 %%% API
 %%%===================================================================
 
-start_link(MetricName, CounterRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, CounterRef], []).
+start_link(MetricName, CounterRef) when is_atom(MetricName) ->
+  gen_server:start_link({local, MetricName}, ?MODULE, [MetricName, CounterRef], []).
 
 %%%===================================================================
 %%% oneup_metrics callbacks
 %%%===================================================================
 
-init_metric(MetricName)->
+init_metric(MetricName) when is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
+  init_metric(MetricNameAtom);
+init_metric(MetricName) when is_atom(MetricName)->
   Counter = oneup:new_counter(),
   oneup_meter_sup:start_meter(MetricName, Counter),
-  {?MODULE, Counter}.
+  {?MODULE, MetricName, Counter}.
 
 update(CounterRef)->
   oneup:inc(CounterRef).
@@ -91,8 +94,7 @@ header()->
 
 init([MetricName, CounterRef]) ->
   erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
-  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
-  {ok, #state{display_name = DisplayName, counter = CounterRef, start = oneup_metrics:current_second()}}.
+  {ok, #state{display_name = atom_to_list(MetricName), counter = CounterRef, start = oneup_metrics:current_second()}}.
 
 handle_call(get, _From, #state{
   counter = CounterRef,
@@ -157,7 +159,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 alpha(Minutes)->
-  1 - math:exp(-?INTERVAL / ?SECONDS_PER_MINUTE / Minutes).
+  1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes)).
 
 tick(_Minutes, Count, undefined)->
   Count / ?INTERVAL;  %% just return instant rate

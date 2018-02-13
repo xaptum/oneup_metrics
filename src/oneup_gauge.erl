@@ -39,11 +39,14 @@
 %%% oneup_metrics callbacks
 %%%===================================================================
 
+init_metric(MetricName) when is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
+  init_metric(MetricNameAtom);
 init_metric(MetricName)->
   Gauge = oneup:new_counter(),
   lager:info("Starting gauge ~p", [MetricName]),
   oneup_gauge_sup:start_gauge(MetricName, Gauge),
-  {?MODULE, Gauge}.
+  {?MODULE, MetricName, Gauge}.
 
 %% This method doesn't make a lot of sense for gauges
 update(CounterRef)->
@@ -60,15 +63,14 @@ header()->
 %%%===================================================================
 
 start_link(MetricName, GaugeRef) ->
-  gen_server:start_link({local, oneup_metrics:metric_name_to_atom(MetricName)}, ?MODULE, [MetricName, GaugeRef], []).
+  gen_server:start_link({local, MetricName}, ?MODULE, [MetricName, GaugeRef], []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
 init([MetricName, GaugeRef]) ->
-  DisplayName = oneup_metrics_handler:display_metric_name(MetricName),
-  {ok, #state{gauge = GaugeRef, display_name = DisplayName}}.
+  {ok, #state{gauge = GaugeRef, display_name = atom_to_list(MetricName)}}.
 
 handle_call(get, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:get(GaugeRef), State};

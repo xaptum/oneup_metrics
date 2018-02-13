@@ -45,5 +45,5 @@ init([]) ->
 %%% Internal functions
 %%%===================================================================
 
-start_gauge(MetricName, Gauge) when is_list(MetricName) ->
+start_gauge(MetricName, Gauge) when is_atom(MetricName) ->
   supervisor:start_child(?MODULE, [MetricName, Gauge]).

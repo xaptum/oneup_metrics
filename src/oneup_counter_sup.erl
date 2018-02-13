@@ -44,5 +44,5 @@ init([]) ->
 %%% Internal functions
 %%%===================================================================
 
-start_counter(MetricName, CounterRef) when is_list(MetricName) ->
+start_counter(MetricName, CounterRef) when is_atom(MetricName) ->
   supervisor:start_child(?MODULE, [MetricName, CounterRef]).
