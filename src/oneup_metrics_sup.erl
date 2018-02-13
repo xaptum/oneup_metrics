@@ -32,18 +32,14 @@ init([MetricsMap]) ->
     %% Restart Strategy
     RestartStrategy = {one_for_one, 4, 3600},
 
-    %%% TODO oneup_histogram and oneup_meter servers will also be children of this supervisor
-    %%% if applicable depending on whether there are histograms and/or meters in config
-%%    Histograms = oneup_metrics:get_histograms(MetricsMap),
-%%    Meters = oneup_metrics:get_meters(MetricsMap),
-
     OneupMetricsServer =
         #{id => oneup_metrics,
             start => {oneup_metrics, start_link, [MetricsMap]},
             restart => permanent,
             shutdown => 1000},
 
-    {ok, { RestartStrategy, [OneupMetricsServer]} }.
+    {ok, { RestartStrategy, [
+        OneupMetricsServer]} }.
 
 %%====================================================================
 %% Internal functions
