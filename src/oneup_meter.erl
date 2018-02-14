@@ -48,12 +48,12 @@
   counter,
   start,
   lifetime_total = 0,
-  instant_rate,
-  one_minute_rate,
-  five_minute_rate,
-  fifteen_minute_rate,
-  hour_rate,
-  day_rate}).
+  instant_rate = 0,
+  one_minute_rate = 0,
+  five_minute_rate = 0,
+  fifteen_minute_rate = 0,
+  hour_rate = 0,
+  day_rate = 0}).
 
 
 
