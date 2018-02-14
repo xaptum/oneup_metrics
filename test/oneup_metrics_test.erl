@@ -228,7 +228,14 @@ meter_test() ->
   oneup_metrics:enable(StatsMap),
 
   [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  0 = Counter = Mean = InstantRate = OneMinRate = FifteenMinRate = FiveMinRate = HourRate = DayRate,
+  0 = Counter,
+  0 = Mean,
+  0 = InstantRate,
+  0 = OneMinRate,
+  0 = FifteenMinRate,
+  0 = FiveMinRate,
+  0 = HourRate,
+  0 = DayRate,
   oneup_metrics:update_metric(StatsMap, [g,b,c1,d1,ref1], 10),
   [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
   Counter = 1000,
@@ -258,10 +265,10 @@ meter_test() ->
   [Counter, _, InstantRate, OneMinRate, FiveMinRate, _, _, _] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
   Counter = 0,
   InstantRate = 0,
-  OneMinRate < 1,
-  FiveMinRate > 2.6,
-  FiveMinRate < 2.8.
-
+  true = OneMinRate < 1,
+  true = FiveMinRate > 2.6,
+  true = FiveMinRate < 2.8,
+  application:stop(oneup_metrics).
 
 
 
@@ -288,8 +295,8 @@ histogram_test()->
   oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],35),
   {2, 25, 10, 35} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
   oneup_metrics:reset([g,b,c1,d1,ref1]),
-  {0, 0, 999999999999, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]).
-
+  {0, 0, 999999999999, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  application:stop(oneup_metrics).
 
 
 
