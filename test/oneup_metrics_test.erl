@@ -271,7 +271,15 @@ histogram_test()->
   {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
   oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],10),
   {1, 10, 10, 10} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  {oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],20),
+  {2, 15, 10, 20} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d2,ref2]),
+  %{oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
+  timer:sleep(60000),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],35),
+  {2, 25, 10, 35} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:reset([g,b,c1,d1,ref1]),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]).
 
 
 
