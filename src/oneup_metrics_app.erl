@@ -16,7 +16,16 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-  {ok, MetricsConfig} = application:get_env(metrics_config),
+  MetricsConfig = application:get_env(oneup_metrics, metrics_config, []),
+
+  RespCnt = oneup_counter_sup:start_link(),
+  lager:info("oneup_counter_sup: ~p", [RespCnt]),
+  RespMeter = oneup_meter_sup:start_link(),
+  lager:info("oneup_meter_sup: ~p", [RespMeter]),
+  RespHisto = oneup_histogram_sup:start_link(),
+  lager:info("oneup_histogram_sup: ~p", [RespHisto]),
+  RespGauge = oneup_gauge_sup:start_link(),
+  lager:info("oneup_gauge_sup: ~p", [RespGauge]),
 
   RespCnt = oneup_counter_sup:start_link(),
   lager:info("oneup_counter_sup: ~p", [RespCnt]),

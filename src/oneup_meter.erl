@@ -159,7 +159,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 alpha(Minutes)->
-  1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes)).
+  1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
 
 tick(_Minutes, Count, undefined)->
   Count / ?INTERVAL;  %% just return instant rate
