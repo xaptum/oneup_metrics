@@ -48,12 +48,12 @@
   counter,
   start,
   lifetime_total = 0,
-  instant_rate,
-  one_minute_rate,
-  five_minute_rate,
-  fifteen_minute_rate,
-  hour_rate,
-  day_rate}).
+  instant_rate = 0,
+  one_minute_rate = 0,
+  five_minute_rate = 0,
+  fifteen_minute_rate = 0,
+  hour_rate = 0,
+  day_rate = 0}).
 
 
 
@@ -107,7 +107,7 @@ handle_call(get, _From, #state{
   hour_rate = HourRate,
   day_rate = DayRate} = State) ->
   Counter = oneup:get(CounterRef),
-  Mean = LifetimeTotal / (oneup_metrics:current_second() - Start),
+  Mean = LifetimeTotal / max(oneup_metrics:current_second() - Start, 1),
   Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
   {reply, Ret, State};
 handle_call(display, _From, #state{counter = CounterRef,
@@ -163,6 +163,9 @@ code_change(_OldVsn, State, _Extra) ->
 %% 1 - math:exp(-?INTERVAL / ?SECONDS_PER_MINUTE / Minutes).
 %% But we liked more accuracy for the recent occurences, specifically 1-minute rate,
 %% hence the modification
+
+max(A, B) when A > B -> A;
+max(A, B) when A =< B -> B.
 
 alpha(Minutes)->
   1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
