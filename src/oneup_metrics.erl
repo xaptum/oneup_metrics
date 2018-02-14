@@ -144,7 +144,10 @@ metric_name_to_atom(MetricName)->
 %%% library is based on global counters which are an Erlang blasphemy to begin with ;)
 %%% no need to worry about bottlenecks
 config()->
-  erlang:get(?METRICS_MAP).
+  case erlang:get(?METRICS_MAP) of
+    undefined -> lager:warning("Metrics not enabled in process ~p ~p", [self(), process_info(self(), registered_name)]);
+    MetricsMap -> MetricsMap
+  end.
 
 
 init_from_config(Config) when is_list(Config)->
