@@ -11,17 +11,26 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(INTERVAL, 5).
+-define(SECONDS_PER_MINUTE, 60.0).
+
+-define(INTERVAL_MILLIS, 5000).
+-define(ONE_MINUTE_MILLIS, 60 * 1000).
+-define(FIVE_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 5).
+-define(FIFTEEN_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 15).
+-define(HOUR_MINUTES, 60).
+-define(DAY_MINUTES, ?HOUR_MINUTES * 24).
 %%@@@@@@@@@@@@@@@@@@@@@@@@@@@  EUNIT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 display_counters_test()->
   StatsConfig = [{oneup_counter,
     [
-    [a, b, c1, d1, ref1],
-    [a, b, c1, d2, ref2],
-    [a, b, c2, d1, ref3],
-    [a, b, c2, d1, ref4],
-    [a2, b2, c2, d2, ref5]
-      ]}
+      [a, b, c1, d1, ref1],
+      [a, b, c1, d2, ref2],
+      [a, b, c2, d1, ref3],
+      [a, b, c2, d1, ref4],
+      [a2, b2, c2, d2, ref5]
+    ]}
   ],
 
   application:ensure_all_started(lager),
@@ -46,11 +55,11 @@ init_from_config_test() ->
 
   StatsConfig = [
     {oneup_counter,
-    [[a, b, c1, d1, ref1],
-    [a, b, c1, d2, ref2],
-    [a, b, c2, d1, ref3],
-    [a, b, c2, d1, ref4],
-    [a2, b2, c2, d2, ref5]]}
+      [[a, b, c1, d1, ref1],
+        [a, b, c1, d2, ref2],
+        [a, b, c2, d1, ref3],
+        [a, b, c2, d1, ref4],
+        [a2, b2, c2, d2, ref5]]}
   ],
 
   application:ensure_all_started(lager),
@@ -205,6 +214,94 @@ gauge_test()->
   application:stop(oneup_metrics).
 
 
+meter_test() ->
+  ct:print("Running meter_test()"),
+  StatsConfig = [{oneup_meter,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  application:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+
+  StatsMap = oneup_metrics:initial_get_config(),
+  oneup_metrics:enable(StatsMap),
+
+  [0, Mean, 0, 0, 0, 0, 0, 0] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  %ct:print("MEAN PROBLEM! ~p~n~n", [[Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate]]),
+  %0 = Counter,
+  ?assert(0 == Mean),
+  %0 = InstantRate,
+  %0 = OneMinRate,
+  %0 = FifteenMinRate,
+  %0 = FiveMinRate,
+  %0 = HourRate,
+  %0 = DayRate,
+  oneup_metrics:update_metric(StatsMap, [g,b,c1,d1,ref1], 1000),
+  [Counter, _, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  1000 = Counter ,
+  0 = InstantRate,
+  0 = OneMinRate,
+  0 =FiveMinRate,
+  0 =FifteenMinRate,
+  0 =HourRate,
+  0 =DayRate,
+
+  timer:sleep(5000),
+  [Counter_new, Mean_new, InstantRate_new, OneMinRate_new, FiveMinRate_new, FifteenMinRate_new, HourRate_new, DayRate_new] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  0 = Counter_new,
+  ?assert(Mean_new < 300),
+  200 = InstantRate_new,
+  OneMinRate_new = tick(1,1000,0),
+  FiveMinRate_new = tick(5,1000,0),
+  FifteenMinRate_new = tick(15,1000,0),
+  HourRate_new = tick(60, 1000, 0),
+  DayRate_new = tick(1440, 1000, 0),
+  [0, 0.0, 0, 0, 0, 0, 0, 0] = oneup_metrics:get_value([g,b,c1,d2,ref2]),
+
+
+
+
+
+  timer:sleep(60000),
+  [Counter_rst, _, InstantRate_rst, OneMinRate_rst, FiveMinRate_rst, _, _, _] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  0 = Counter_rst,
+  0 =InstantRate_rst,
+  true = OneMinRate_rst < 1,
+  true = FiveMinRate_rst > 2.6,
+  true = FiveMinRate_rst < 2.8,
+  application:stop(oneup_metrics).
+
+
+
+histogram_test()->
+  ct:print("Running histogram_test()"),
+  StatsConfig = [{oneup_histogram,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  application:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+
+  StatsMap = oneup_metrics:initial_get_config(),
+  oneup_metrics:enable(StatsMap),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],10),
+  {1, 10, 10, 10} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],20),
+  {2, 15, 10, 20} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d2,ref2]),
+  %{oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
+  timer:sleep(60000),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],35),
+  {2, 25, 10, 35} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:reset([g,b,c1,d1,ref1]),
+  {0, 0, 999999999999, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  application:stop(oneup_metrics).
+
+
+
 direct_inc_sequential_test()->
   CounterRef = oneup:new_counter(),
 
@@ -239,15 +336,15 @@ perf_depth5_test()->
 
   StatsConfig = [
     {oneup_counter, [[a,b,c1,d1,ref1],
-    [a,b,c1,d2,ref2],
-    [a,b,c2,d1, ref3],
-    [a, b, c2, d1, ref4],
-    [a2, b2, c2, d2, ref5],
-    [a2, b3, c3, d2, ref6],
-    [a2, b3, c3, d3, ref7],
-    [a3, b1, c1, d1, ref8],
-    [a3, b1, c2, d2, ref9],
-    [a3, b2, c3, d10, ref10]]}],
+      [a,b,c1,d2,ref2],
+      [a,b,c2,d1, ref3],
+      [a, b, c2, d1, ref4],
+      [a2, b2, c2, d2, ref5],
+      [a2, b3, c3, d2, ref6],
+      [a2, b3, c3, d3, ref7],
+      [a3, b1, c1, d1, ref8],
+      [a3, b1, c2, d2, ref9],
+      [a3, b2, c3, d10, ref10]]}],
 
   application:ensure_all_started(lager),
   application:set_env(oneup_metrics, metrics_config, StatsConfig),
@@ -319,3 +416,12 @@ verify_avg_time(Total, Samples, Micros) ->
   AvgTime = Total/Samples,
   ct:print("AvgTime ~p", [AvgTime]),
   ?assert(AvgTime < Micros).
+
+alpha(Minutes)->
+  1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
+
+tick(_Minutes, Count, undefined)->
+  Count / ?INTERVAL;  %% just return instant rate
+tick(Minutes, Count, PrevRate)->
+  InstantRate = Count / ?INTERVAL,
+  PrevRate + (alpha(Minutes) * (InstantRate - PrevRate)).
