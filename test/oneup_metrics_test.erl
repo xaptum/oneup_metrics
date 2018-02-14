@@ -30,6 +30,7 @@ display_counters_test()->
 
   StatsMap = oneup_metrics:init_from_config(StatsConfig),
   Body = oneup_metrics_handler:display_metrics(StatsMap),
+
   ct:print("@@@@@@@@@@@@ ~nFULL METRICS MAP:~n@@@@@@@@@@@@@@@@@@@@@@@@@@@~n ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [Body]),
 
   SubMetricsMapA = oneup_metrics:get_sub_metrics(StatsMap, [a]),
@@ -40,9 +41,6 @@ display_counters_test()->
   SubMetricsMapABC2 = oneup_metrics:get_sub_metrics(StatsMap, [a, b, c2]),
   SubMetricsBodyABC2 = oneup_metrics_handler:display_metrics(SubMetricsMapABC2),
   ct:print("@@@@@@@@@@@@ ~nMETRICS MAP a:~n@@@@@@@@@@@@@@@@@@@@@@@@@@@~n ~p~n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", [SubMetricsBodyABC2]).
-
-
-
 
 init_from_config_test() ->
 
@@ -146,6 +144,7 @@ counter_test()->
   20 = FinalCount,
 
   [spawn(oneup_metrics, update_metric, [StatsMap, [a,b,c1,d2,ref2]]) || _I <- lists:seq(1,10)],
+
   timer:sleep(100),
   30 = oneup_metrics:get_value('a.b.c1.d2.ref2'),
 
@@ -157,6 +156,7 @@ counter_test()->
 
   [spawn(oneup_metrics, update_metric, [StatsMap, [a, b, c2, d1, ref4], N]) || N <- lists:seq(1,10)],
   timer:sleep(100),
+
   55 = oneup_metrics:get_value('a.b.c2.d1.ref4'),
 
   oneup_metrics:reset('a.b.c1.d1.ref1'),
@@ -177,7 +177,6 @@ gauge_test()->
   application:ensure_all_started(lager),
   application:set_env(oneup_metrics, metrics_config, StatsConfig),
   application:ensure_all_started(oneup_metrics),
-
 
   StatsMap = oneup_metrics:initial_get_config(),
   oneup_metrics:enable(StatsMap),

@@ -27,6 +27,15 @@ start(_StartType, _StartArgs) ->
   RespGauge = oneup_gauge_sup:start_link(),
   lager:info("oneup_gauge_sup: ~p", [RespGauge]),
 
+  RespCnt = oneup_counter_sup:start_link(),
+  lager:info("oneup_counter_sup: ~p", [RespCnt]),
+  RespMeter = oneup_meter_sup:start_link(),
+  lager:info("oneup_meter_sup: ~p", [RespMeter]),
+  RespHisto = oneup_histogram_sup:start_link(),
+  lager:info("oneup_histogram_sup: ~p", [RespHisto]),
+  RespGauge = oneup_gauge_sup:start_link(),
+  lager:info("oneup_gauge_sup: ~p", [RespGauge]),
+
   MetricsMap = oneup_metrics:init_from_config(MetricsConfig),
 
   maybe_start_http_reporters(),
