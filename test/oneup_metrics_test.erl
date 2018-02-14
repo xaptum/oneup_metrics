@@ -219,7 +219,7 @@ meter_test() ->
   StatsConfig = [{oneup_meter,
     [ [g,b,c1,d1,ref1],
       [g,b,c1,d2,ref2]]}],
-  pplication:ensure_all_started(lager),
+  application:ensure_all_started(lager),
   application:set_env(oneup_metrics, metrics_config, StatsConfig),
   application:ensure_all_started(oneup_metrics),
 
@@ -228,8 +228,9 @@ meter_test() ->
   oneup_metrics:enable(StatsMap),
 
   [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  ct:print("MEAN PROBLEM! ~p~n~n", [[Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate]]),
   0 = Counter,
-  0 = Mean,
+  ?assert(0 == Mean),
   0 = InstantRate,
   0 = OneMinRate,
   0 = FifteenMinRate,
@@ -277,7 +278,7 @@ histogram_test()->
   StatsConfig = [{oneup_histogram,
     [ [g,b,c1,d1,ref1],
       [g,b,c1,d2,ref2]]}],
-  pplication:ensure_all_started(lager),
+  application:ensure_all_started(lager),
   application:set_env(oneup_metrics, metrics_config, StatsConfig),
   application:ensure_all_started(oneup_metrics),
 
