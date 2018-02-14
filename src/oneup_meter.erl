@@ -158,6 +158,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+%% TODO alpha calculation should be configurable.
+%% Original based on dropwizard was
+%% 1 - math:exp(-?INTERVAL / ?SECONDS_PER_MINUTE / Minutes).
+%% But we liked more accuracy for the recent occurences, specifically 1-minute rate,
+%% hence the modification
+
 alpha(Minutes)->
   1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
 
