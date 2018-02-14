@@ -11,6 +11,15 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(INTERVAL, 5).
+-define(SECONDS_PER_MINUTE, 60.0).
+
+-define(INTERVAL_MILLIS, 5000).
+-define(ONE_MINUTE_MILLIS, 60 * 1000).
+-define(FIVE_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 5).
+-define(FIFTEEN_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 15).
+-define(HOUR_MINUTES, 60).
+-define(DAY_MINUTES, ?HOUR_MINUTES * 24).
 %%@@@@@@@@@@@@@@@@@@@@@@@@@@@  EUNIT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 display_counters_test()->
@@ -279,7 +288,7 @@ histogram_test()->
   oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],35),
   {2, 25, 10, 35} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
   oneup_metrics:reset([g,b,c1,d1,ref1]),
-  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]).
+  {0, 0, 999999999999, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]).
 
 
 
@@ -398,3 +407,12 @@ verify_avg_time(Total, Samples, Micros) ->
   AvgTime = Total/Samples,
   ct:print("AvgTime ~p", [AvgTime]),
   ?assert(AvgTime < Micros).
+
+alpha(Minutes)->
+  1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
+
+tick(_Minutes, Count, undefined)->
+  Count / ?INTERVAL;  %% just return instant rate
+tick(Minutes, Count, PrevRate)->
+  InstantRate = Count / ?INTERVAL,
+  PrevRate + (alpha(Minutes) * (InstantRate - PrevRate)).
