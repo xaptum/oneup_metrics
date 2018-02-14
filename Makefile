@@ -15,7 +15,7 @@ recompile:
 	$(REBAR) compile
 
 eunit:
-	$(REBAR) eunit --file="$(BASEDIR)/test/oneup_metrics_test.erl"
+	$(REBAR) eunit --module= oneup_metrics_test
 
 common-test:
 	ct_run -dir $(BASEDIR)/ct -logdir $(BASEDIR)/ct/logs \
