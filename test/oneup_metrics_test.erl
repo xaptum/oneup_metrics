@@ -205,6 +205,77 @@ gauge_test()->
   application:stop(oneup_metrics).
 
 
+meter_test() ->
+  ct:print("Running meter_test()"),
+  StatsConfig = [{oneup_meter,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  pplication:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+
+  StatsMap = oneup_metrics:initial_get_config(),
+  oneup_metrics:enable(StatsMap),
+
+  [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  0 = Counter = Mean = InstantRate = OneMinRate = FifteenMinRate = FiveMinRate = HourRate = DayRate,
+  oneup_metrics:update_metric(StatsMap, [g,b,c1,d1,ref1], 10),
+  [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  Counter = 1000,
+  InstantRate = 0,
+  OneMinRate = 0,
+  FiveMinRate = 0,
+  FifteenMinRate = 0,
+  HourRate = 0,
+  DayRate = 0,
+
+  timer:sleep(5000),
+  [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  Counter = 0,
+  InstantRate = 200,
+  OneMinRate = tick(1,1000,0),
+  FiveMinRate = tick(5,1000,0),
+  FifteenMinRate = tick(15,1000,0),
+  HourRate = tick(60, 1000, 0),
+  DayRate = tick(1440, 1000, 0),
+  [0, 0, 0, 0, 0, 0, 0, 0] = oneup_metrics:get_value([g,b,c1,d2,ref2]),
+
+
+
+
+
+  timer:sleep(60000),
+  [Counter, _, InstantRate, OneMinRate, FiveMinRate, _, _, _] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  Counter = 0,
+  InstantRate = 0,
+  OneMinRate < 1,
+  FiveMinRate > 2.6,
+  FiveMinRate < 2.8.
+
+
+
+
+histogram_test()->
+  ct:print("Running histogram_test()"),
+  StatsConfig = [{oneup_histogram,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  pplication:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+
+  StatsMap = oneup_metrics:initial_get_config(),
+  oneup_metrics:enable(StatsMap),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],10),
+  {1, 10, 10, 10} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  {oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
+
+
+
+
 direct_inc_sequential_test()->
   CounterRef = oneup:new_counter(),
 
