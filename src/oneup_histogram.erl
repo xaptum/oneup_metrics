@@ -104,7 +104,7 @@ handle_call(display, _From, #state{
   Samples = PrevSamples + oneup:get(CurrSamples),
   Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
   Mean = avg(Values, Samples),
-  DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s~~20w~~20w~~20w~~20w~n",
+  DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
     ["histogram", DisplayName,
       Samples, min(oneup:get(Min)), Mean, oneup:get(Max)])),
   {reply, DisplayHistogram, State}.
