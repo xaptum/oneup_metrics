@@ -61,5 +61,8 @@ start_http_reporter(HttpPort)->
       {"/[...]", oneup_metrics_handler, []}
     ]}
   ]),
-  {ok, _} = cowboy:start_clear(http, [{port, HttpPort}], #{env => #{dispatch => Dispatch}
-  }).
+  Result = cowboy:start_clear(http, [{port, HttpPort}], #{env => #{dispatch => Dispatch}}),
+  case Result of
+    {error,{already_started, ExistingPid}} -> lager:info("http reporter already started at ~p", [ExistingPid]);
+    {ok, _} -> ok
+  end.
