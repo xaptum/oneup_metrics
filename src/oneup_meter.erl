@@ -122,7 +122,7 @@ handle_call(display, _From, #state{counter = CounterRef,
                                     day_rate = DayRate} = State) ->
   Counter = oneup:get(CounterRef),
   Mean = LifetimeTotal / (oneup_metrics:current_second() - Start),
-  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20b~-20e~-20e~-20e~-20e~-20e~-20e~-20e~n",
+  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20b~-20e~-20b~-20b~-20b~-20b~-20b~-20b~n",
     ["meter", DisplayName, Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
   {reply, DisplayMeterValues, State}.
 
