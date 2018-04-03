@@ -2,6 +2,8 @@
 
 ### High performance metrics app in Erlang 
 
+# UNDER CONSTRUCTION, API is a bit complex at the moment and we'll be making it much friendlier with `fling` or `foil` repos for registering metrics to a write ony ets tables. 
+
 Usable as is, but still largely UNDER CONSTRUCTION.  
 
 Inspired by and built upon `oneup` global counters:
