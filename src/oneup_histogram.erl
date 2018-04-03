@@ -127,7 +127,7 @@ handle_info({timeout, _TimerRef, tick},
   NewPrevSamples = DecayedPrevSamples + DecayedNewSamples,
   NewPrevValue = avg(DecayedPrevValue + DecayedNewValue, NewPrevSamples),
 
-  {noreply, #state{prev_value = NewPrevValue, prev_samples = NewPrevSamples}}.
+  {noreply, State#state{prev_value = NewPrevValue, prev_samples = NewPrevSamples}}.
 
 terminate(_Reason, _State) ->
   ok.
