@@ -74,7 +74,7 @@ handle_call(reset, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:set(CounterRef, 0), State};
 handle_call(display, _From, #state{counter = CounterRef, display_name = DisplayName} = State) ->
   CounterValue =  oneup:get(CounterRef),
-  DisplayString = io_lib:format("~-15s~-50s~-20b~n", ["counter", DisplayName, CounterValue]),
+  DisplayString = io_lib:format("~-15s~-50s~-20w~n", ["counter", DisplayName, CounterValue]),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->
