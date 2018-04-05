@@ -35,7 +35,7 @@ init([]) ->
   CounterSpec =
     #{id => oneup_counter,
       start => {oneup_counter, start_link, []},
-      restart => temporary,
+      restart => permanent,
       shutdown => 5000},
 
   {ok, {RestartStrategy, [CounterSpec]}}.

@@ -35,7 +35,7 @@ init([]) ->
   HistogramSpec =
     #{id => oneup_histogram,
       start => {oneup_histogram, start_link, []},
-      restart => temporary,
+      restart => permanent,
       shutdown => 5000},
 
   {ok, {RestartStrategy, [HistogramSpec]}}.

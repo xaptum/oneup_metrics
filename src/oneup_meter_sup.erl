@@ -35,7 +35,7 @@ init([]) ->
   MeterSpec =
     #{id => oneup_meter,
       start => {oneup_meter, start_link, []},
-      restart => temporary,
+      restart => permanent,
       shutdown => 5000},
 
   {ok, {RestartStrategy, [MeterSpec]}}.

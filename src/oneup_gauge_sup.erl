@@ -36,7 +36,7 @@ init([]) ->
   GaugeSpec =
     #{id => oneup_gauge,
       start => {oneup_gauge, start_link, []},
-      restart => temporary,
+      restart => permanent,
       shutdown => 5000},
 
   {ok, {RestartStrategy, [GaugeSpec]}}.
