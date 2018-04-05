@@ -123,7 +123,7 @@ handle_call(display, _From, #state{counter = CounterRef,
   Counter = oneup:get(CounterRef),
   Mean =
   case (oneup_metrics:current_second() - Start) of
-    Duration when Duration =/= 0 -> LifetimeTotal / (oneup_metrics:current_second() - Start);
+    Duration when Duration =/= 0 -> LifetimeTotal / Duration;
     Duration when Duration =:= 0 -> 0
   end,
   DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~-20w~-20w~-20w~-20w~n",
