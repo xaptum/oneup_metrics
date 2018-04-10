@@ -54,6 +54,7 @@ init_metric(MetricName) when is_atom(MetricName)->
   ],
   oneup:set(MinCounterRef, ?UNDEFINED_MIN),
   oneup_histogram_sup:start_histogram(MetricName, Counters),
+  oneup_metric_config:insert(MetricName,[{oneup_histogram, Counters}]),
   {?MODULE, MetricName, Counters}.
 
 %% This method doesn't make much sense for histograms
