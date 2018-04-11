@@ -151,7 +151,9 @@ config()->
 
 
 init_from_config(Config) when is_list(Config)->
-  lists:foldl(fun(Type, AllMetrics) -> add_metrics({Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
+  oneup_metric_config:init(),
+  lists:foldl(fun(Type, AllMetrics) -> add_metrics({Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)),
+  oneup_metric_config:start().
 
 add_metrics({Type, NewMetrics}, InitialMetrics)->
   SpecificTypeMetrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
