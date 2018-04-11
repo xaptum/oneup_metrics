@@ -21,7 +21,12 @@
 -export([start_link/1,
   get_value/1,
   reset/1,
-  display/1]).
+  display/1,
+  display/2,
+  reset/2,
+  update/2,
+  update/3,
+  get/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -211,13 +216,13 @@ update(MetricName) when is_list(MetricName)->
 update(Unexpected)->
   lager:error("Unexpected arg in update: ~p", [Unexpected]).
 
-update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
-  MetricType:update(CounterRef, Value);
-update(MetricName, Value) when is_list(MetricName)->
-  case get_metric(MetricName) of
-    {error, Error} -> lager:error("Error getting metric ~p: ~p", [MetricName, Error]);
-    {Type, _MetricName, CounterRefs} -> update({Type, CounterRefs}, Value)
-  end.
+%update({MetricType, CounterRef}, Value) when is_atom(MetricType)->
+%  MetricType:update(CounterRef, Value);
+%update(MetricName, Value) when is_list(MetricName)->
+%  case get_metric(MetricName) of
+%    {error, Error} -> lager:error("Error getting metric ~p: ~p", [MetricName, Error]);
+%    {Type, _MetricName, CounterRefs} -> update({Type, CounterRefs}, Value)
+%  end.
 
 
 update_metric(MetricsMap, MetricName) when is_map(MetricsMap) ->
@@ -286,7 +291,9 @@ current_second() ->
 
 
 %%% new update functions for integrating the oneup_metric_config implementation
-update(Name, Type)->
+update(MetricName, Type) when is_list(MetricName)->
+  update(metric_name_to_atom(MetricName), Type);
+update(Name, Type) when is_atom(Name) ->
   Counters = oneup_metric_config:get(Name, Type),
   case Counters of
     undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
@@ -298,7 +305,9 @@ update(Name, Type)->
          end
   end.
 
-update(Name, Type, Value)->
+update(MetricName, Type, Value) when is_list(MetricName)->
+  update(metric_name_to_atom(MetricName), Type, Value);
+update(Name, Type, Value) when is_atom(Name) ->
   Counters = oneup_metric_config:get(Name, Type),
   case Counters of
     undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
@@ -340,7 +349,9 @@ update_histogram(Counters, Value)->
 
 
 %%% reset metric base on name and type
-reset(Name, Type)->
+reset(MetricName, Type) when is_list(MetricName) ->
+  reset(metric_name_to_atom(MetricName),Type);
+reset(Name, Type) when is_atom(Name) ->
   Counters = oneup_metric_config:get(Name, Type),
   case Counters of
     undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
@@ -367,7 +378,9 @@ reset2zero(Counters)->
 
 %%% new get method for oneup_metric_config integration
 %%% histogram and meter still calls individual server since they depend on individual timing
-get(Name, Type)->
+get(MetricName, Type) when is_list(MetricName) ->
+  get(metric_name_to_atom(MetricName),Type);
+get(Name, Type) when is_atom(Name) ->
   Counters = oneup_metric_config:get(Name, Type),
   case Counters of
     undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
@@ -384,7 +397,9 @@ get(Name, Type)->
 get_oneup_value(Counters)->
   oneup:get(Counters).
 
-display(Name, Type)->
+display(MetricName, Type) when is_list(MetricName) ->
+  display(metric_name_to_atom(MetricName),Type);
+display(Name, Type) when is_atom(Name) ->
   Counters = oneup_metric_config:get(Name, Type),
   case Counters of
     undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
