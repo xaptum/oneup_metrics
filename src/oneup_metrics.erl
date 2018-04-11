@@ -32,7 +32,7 @@
   code_change/3]).
 
 -define(SERVER, ?MODULE).
-
+-define(UNDEFINED_MIN, 999999999999).
 -record(state, {metrics}).
 
 
@@ -280,3 +280,121 @@ reset_counter(Val) when is_map(Val)->
 current_second() ->
   {Mega, Sec, _Micro} = os:timestamp(),
   (Mega * 1000000 + Sec).
+
+
+
+%%% new update functions for integrating the oneup_metric_config implementation
+update(Name, Type)->
+  Counters = oneup_metric_config:get(Name, Type),
+  case Counters of
+    undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
+    _ -> case Type of
+           oneup_meter -> update_meter(Counters);
+           oneup_gauge -> update_gauge(Counters);
+           oneup_counter -> update_counter(Counters);
+           _ -> lager:warning("Updating ~p is not supported for this method", [Type])
+         end
+  end.
+
+update(Name, Type, Value)->
+  Counters = oneup_metric_config:get(Name, Type),
+  case Counters of
+    undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
+    _ -> case Type of
+           oneup_meter -> update_meter(Counters, Value);
+           oneup_gauge -> update_gauge(Counters, Value);
+           oneup_counter -> update_counter(Counters, Value);
+           oneup_histogram -> update_histogram(Counters, Value);
+           _ -> lager:warning("Updating ~p is not supported for this method", [Type])
+         end
+  end.
+
+%%% internal functions for updating the metric
+%%% histogram needs to have a value input in order to update
+update_meter(Counters) ->
+  oneup:inc(Counters).
+
+update_meter(Counters, Value)->
+  oneup:inc2(Counters, Value).
+
+update_gauge(Counters)->
+  oneup:set(Counters, 1).
+
+update_gauge(Counters, Value)->
+  oneup:set(Counters, Value).
+
+update_counter(Counters)->
+  oneup:inc(Counters).
+
+update_counter(Counters, Value)->
+  oneup:inc2(Counters, Value).
+
+update_histogram(Counters, Value)->
+  [ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounterRef] = Counters,
+  oneup:inc2(ValueAggregateCounterRef, Value),
+  oneup:inc(OccurenceCounterRef),
+  oneup:set_min(MinCounterRef, Value),
+  oneup:set_max(MaxCounterRef, Value).
+
+
+%%% reset metric base on name and type
+reset(Name, Type)->
+  Counters = oneup_metric_config:get(Name, Type),
+  case Counters of
+    undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
+    _ -> case Type of
+           oneup_meter -> reset2zero(Counters);
+           oneup_gauge -> reset2zero(Counters);
+           oneup_counter -> reset2zero(Counters);
+           oneup_histogram -> reset_histogram(Counters);
+           _ -> lager:warning("Reseting ~p is not supported for this method", [Type])
+         end
+  end.
+
+%%% internal function for resetting metrics
+%%% for resetting histogram
+reset_histogram(Counters)->
+  [ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounterRef] = Counters,
+  oneup:set(OccurenceCounterRef, 0),
+  oneup:set(ValueAggregateCounterRef, 0),
+  oneup:set(MinCounterRef, ?UNDEFINED_MIN),
+  oneup:set(MaxCounterRef, 0).
+%%% for resetting meter, counter and gauge since they all reset to 0
+reset2zero(Counters)->
+  oneup:set(Counters, 0).
+
+%%% new get method for oneup_metric_config integration
+%%% histogram and meter still calls individual server since they depend on individual timing
+get(Name, Type)->
+  Counters = oneup_metric_config:get(Name, Type),
+  case Counters of
+    undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
+    _ -> case Type of
+           oneup_meter -> gen_server:call(Name, get);
+           oneup_gauge -> get_oneup_value(Counters);
+           oneup_counter -> get_oneup_value(Counters);
+           oneup_histogram -> gen_server:call(Name, get);
+           _ -> lager:warning("Reseting ~p is not supported for this method", [Type])
+         end
+  end.
+
+%%% internal function to get counter value base on counter reference
+get_oneup_value(Counters)->
+  oneup:get(Counters).
+
+display(Name, Type)->
+  Counters = oneup_metric_config:get(Name, Type),
+  case Counters of
+    undefined -> lager:warning("Requested metric ~p either not exist or missing ~p ", [Name,Type]);
+    _ -> case Type of
+           oneup_meter -> gen_server:call(Name, display);
+           oneup_gauge -> display_oneup_value(Name,Counters,Type);
+           oneup_counter -> display_oneup_value(Name,Counters,Type);
+           oneup_histogram -> gen_server:call(Name, display);
+           _ -> lager:warning("Reseting ~p is not supported for this method", [Type])
+         end
+  end.
+
+display_oneup_value(Name, Counters,Type)->
+  CounterValue =  oneup:get(Counters),
+  io_lib:format("~-15s~-50s~-20b~n", [Type, Name, CounterValue]).
