@@ -23,15 +23,21 @@ init()->
   end.
 
 start()->
-  case foil:load(test) of
+  case foil:load(?TABLE_NAME) of
     ok -> ok;
     _->lager:warning("oneup_metric_config failed to start")
   end.
 
-insert(Key, Value)->
+insert(Key,Value) when is_list(Key)->
+  insert(metric_name_to_atom(Key),Value);
+insert(Key,Value) when is_atom(Key)->
   foil:insert(?TABLE_NAME, Key, Value).
 
-get(Key,Type)->
+
+
+get(Key,Type) when is_list(Key)->
+  get(metric_name_to_atom(Key),Type);
+get(Key,Type) when is_atom(Key)->
   try foil:lookup(?TABLE_NAME, Key) of
   {ok, Counter_list} -> grab_ref(Counter_list, Type)
   catch
@@ -54,4 +60,5 @@ grab_ref([Head|Tail],Type)->
   end.
 
 
-
+metric_name_to_atom(MetricName)->
+  list_to_atom(string:join([atom_to_list(Part) || Part <- MetricName], ".")).

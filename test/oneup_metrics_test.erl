@@ -29,9 +29,9 @@ oneup_config_test()->
   oneup_metric_config:insert(test_entry_1,[{atom, test}]),
   oneup_metric_config:insert(test_entry_2,[{atom, test_0}, {list, [test_1, test_2]}]),
   oneup_metric_config:start(),
-  undefined = oneup_metric_config:get(test_entry_0,atom),
-  test = oneup_metric_config:get(test_entry_1,atom),
-  [test_1, test_2] = oneup_metric_config:get(test_entry_2,list).
+  undefined = oneup_metric_config:get(test_entry_0, atom),
+  test = oneup_metric_config:get(test_entry_1, atom),
+  [test_1, test_2] = oneup_metric_config:get(test_entry_2, list).
 
 
 
