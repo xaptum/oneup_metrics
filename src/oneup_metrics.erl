@@ -323,22 +323,28 @@ update(Name, Type, Value) when is_atom(Name) ->
 %%% internal functions for updating the metric
 %%% histogram needs to have a value input in order to update
 update_meter(Counters) ->
-  oneup:inc(Counters).
+  [Counter] = Counters,
+  oneup:inc(Counter).
 
 update_meter(Counters, Value)->
-  oneup:inc2(Counters, Value).
+  [Counter] = Counters,
+  oneup:inc2(Counter, Value).
 
 update_gauge(Counters)->
-  oneup:set(Counters, 1).
+  [Counter] = Counters,
+  oneup:set(Counter, 1).
 
 update_gauge(Counters, Value)->
-  oneup:set(Counters, Value).
+  [Counter] = Counters,
+  oneup:set(Counter, Value).
 
 update_counter(Counters)->
-  oneup:inc(Counters).
+  [Counter] = Counters,
+  oneup:inc(Counter).
 
 update_counter(Counters, Value)->
-  oneup:inc2(Counters, Value).
+  [Counter] = Counters,
+  oneup:inc2(Counter, Value).
 
 update_histogram(Counters, Value)->
   [ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounterRef] = Counters,
@@ -374,7 +380,8 @@ reset_histogram(Counters)->
   oneup:set(MaxCounterRef, 0).
 %%% for resetting meter, counter and gauge since they all reset to 0
 reset2zero(Counters)->
-  oneup:set(Counters, 0).
+  [Counter] = Counters,
+  oneup:set(Counter, 0).
 
 %%% new get method for oneup_metric_config integration
 %%% histogram and meter still calls individual server since they depend on individual timing
@@ -395,7 +402,8 @@ get(Name, Type) when is_atom(Name) ->
 
 %%% internal function to get counter value base on counter reference
 get_oneup_value(Counters)->
-  oneup:get(Counters).
+  [Counter] = Counters,
+  oneup:get(Counter).
 
 display(MetricName, Type) when is_list(MetricName) ->
   display(metric_name_to_atom(MetricName),Type);
@@ -413,5 +421,6 @@ display(Name, Type) when is_atom(Name) ->
   end.
 
 display_oneup_value(Name, Counters,Type)->
-  CounterValue =  oneup:get(Counters),
+  [Counter] = Counters,
+  CounterValue =  oneup:get(Counter),
   io_lib:format("~-15s~-50s~-20b~n", [Type, Name, CounterValue]).

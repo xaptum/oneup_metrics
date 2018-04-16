@@ -73,7 +73,7 @@ init_metric(MetricName) when is_list(MetricName)->
   init_metric(MetricNameAtom);
 init_metric(MetricName) when is_atom(MetricName)->
   Counter = oneup:new_counter(),
-  oneup_metric_config:insert(MetricName,[{oneup_meter, Counter}]),
+  oneup_metric_config:insert(MetricName,[{oneup_meter, [Counter]}]),
   oneup_meter_sup:start_meter(MetricName, Counter),
   {?MODULE, MetricName, Counter}.
 
