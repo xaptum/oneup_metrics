@@ -32,8 +32,11 @@ insert(Key, Value)->
   foil:insert(?TABLE_NAME, Key, Value).
 
 get(Key,Type)->
-  {ok, Counter_list} = foil:lookup(?TABLE_NAME, Key),
-  grab_ref(Counter_list, Type).
+  try foil:lookup(?TABLE_NAME, Key) of
+  {ok, Counter_list} -> grab_ref(Counter_list, Type)
+  catch
+    error: key_not_found -> undefined
+  end.
 
 
 %%% internal function for getting counter reference from a list of tuple: {Type, Ref} base on Type
