@@ -11,6 +11,16 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+
+-define(INTERVAL, 5).
+-define(SECONDS_PER_MINUTE, 60.0).
+
+-define(INTERVAL_MILLIS, 5000).
+-define(ONE_MINUTE_MILLIS, 60 * 1000).
+-define(FIVE_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 5).
+-define(FIFTEEN_MINUTE_MILLIS, ?ONE_MINUTE_MILLIS * 15).
+-define(HOUR_MINUTES, 60).
+-define(DAY_MINUTES, ?HOUR_MINUTES * 24).
 %%@@@@@@@@@@@@@@@@@@@@@@@@@@@  EUNIT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 display_counters_test()->
@@ -66,7 +76,10 @@ init_from_config_test() ->
   {oneup_counter, 'a.b.c1.d2.ref2',Ref2} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d2, ref2]),
   {oneup_counter, 'a.b.c2.d1.ref3', Ref3} = oneup_metrics:get_metric(StatsMap, [a, b, c2, d1, ref3]),
   {oneup_counter, 'a.b.c2.d1.ref4', Ref4} = oneup_metrics:get_metric(StatsMap, [a, b, c2, d1, ref4]),
-
+  Ref1 = oneup_metric_config:get('a.b.c1.d1.ref1', oneup_counter),
+  Ref2 = oneup_metric_config:get('a.b.c1.d1.ref2', oneup_counter),
+  Ref3 = oneup_metric_config:get('a.b.c1.d1.ref3', oneup_counter),
+  Ref4 = oneup_metric_config:get('a.b.c1.d1.ref4', oneup_counter),
   StatsA = oneup_metrics:get_sub_metrics(StatsMap, [a]),
   StatsAExpected = #{b => #{c1 => #{d1 => #{ref1 => {oneup_counter, 'a.b.c1.d1.ref1', Ref1}},
     d2 => #{ref2 => {oneup_counter, 'a.b.c1.d2.ref2', Ref2}}},
@@ -110,7 +123,10 @@ init_from_config_test() ->
 
   application:stop(oneup_metrics).
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Counter test
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TODO change to init_from_config
 counter_test()->
 
   ct:print("Running counter_test()"),
@@ -126,44 +142,53 @@ counter_test()->
   application:ensure_all_started(oneup_metrics),
 
 
-  StatsMap = oneup_metrics:initial_get_config(),
-  oneup_metrics:enable(StatsMap),
+  StatsMap = oneup_metrics:init_from_config(StatsConfig),
 
   {oneup_counter, 'a.b.c1.d1.ref1', CounterRef1} = oneup_metrics:get_metric([a,b,c1,d1,ref1]),
-
+  CounterRef1 = oneup_metric_config:get('a.b.c1.d1.ref1', oneup_counter),
   ct:print("CounterRef ~p for ~p in the map ~p", [CounterRef1, [a,b,c1,d1,ref1], StatsMap]),
 
-  [oneup_metrics:update({oneup_counter, CounterRef1}, 2) || _I <- lists:seq(1,10)],
+  [oneup_metrics:update([a,b,c1,d1,ref1],oneup_counter, 2) || _I <- lists:seq(1,10)],
 
-  20 = oneup_metrics:get_value('a.b.c1.d1.ref1'),
+  20 = oneup_metrics:get('a.b.c1.d1.ref1',oneup_counter),
 
-  [spawn(oneup_metrics, update_metric, [StatsMap, [a,b,c1,d2,ref2], 2]) || _I <- lists:seq(1,10)],
+  [spawn(oneup_metrics, update, [[a,b,c1,d2,ref2],oneup_counter, 2]) || _I <- lists:seq(1,10)],
   timer:sleep(100),
-  FinalCount = oneup_metrics:get_value([a,b,c1,d2,ref2]),
+  FinalCount = oneup_metrics:get([a,b,c1,d2,ref2],oneup_counter),
   io:format("Increment 10 times by 2 result: ~p~n", [FinalCount]),
   20 = FinalCount,
 
-  [spawn(oneup_metrics, update_metric, [StatsMap, [a,b,c1,d2,ref2]]) || _I <- lists:seq(1,10)],
+  [spawn(oneup_metrics, update, [[a,b,c1,d2,ref2]],oneup_counter) || _I <- lists:seq(1,10)],
 
   timer:sleep(100),
-  30 = oneup_metrics:get_value('a.b.c1.d2.ref2'),
+  30 = oneup_metrics:get('a.b.c1.d2.ref2',oneup_counter),
 
-  [oneup_metrics:update_metric(StatsMap, [a,b,c2,d1, ref3], N) || N <- lists:seq(1,10)],
+  [oneup_metrics:update([a,b,c2,d1, ref3], oneup_counter,N) || N <- lists:seq(1,10)],
 
-  55 = oneup_metrics:get_value('a.b.c2.d1.ref3'),
+  55 = oneup_metrics:get('a.b.c2.d1.ref3',oneup_counter),
 
-  0 = oneup_metrics:get_value('a.b.c2.d1.ref4'),
+  0 = oneup_metrics:get('a.b.c2.d1.ref4',oneup_counter),
 
-  [spawn(oneup_metrics, update_metric, [StatsMap, [a, b, c2, d1, ref4], N]) || N <- lists:seq(1,10)],
+  [spawn(oneup_metrics, update, [[a, b, c2, d1, ref4],oneup_counter, N]) || N <- lists:seq(1,10)],
   timer:sleep(100),
 
-  55 = oneup_metrics:get_value('a.b.c2.d1.ref4'),
+  55 = oneup_metrics:get('a.b.c2.d1.ref4',oneup_counter),
 
-  oneup_metrics:reset('a.b.c1.d1.ref1'),
-  0 = oneup_metrics:get_value('a.b.c1.d1.ref1'),
+  oneup_metrics:reset('a.b.c1.d1.ref1',oneup_counter),
+  0 = oneup_metrics:get('a.b.c1.d1.ref1',oneup_counter),
 
-  30 = oneup_metrics:get_value('a.b.c1.d2.ref2'),
+  30 = oneup_metrics:get('a.b.c1.d2.ref2',oneup_counter),
   application:stop(oneup_metrics).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Counter test end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Gauge test
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 gauge_test()->
   ct:print("Running gauge_test()"),
@@ -178,24 +203,23 @@ gauge_test()->
   application:set_env(oneup_metrics, metrics_config, StatsConfig),
   application:ensure_all_started(oneup_metrics),
 
-  StatsMap = oneup_metrics:initial_get_config(),
-  oneup_metrics:enable(StatsMap),
+  StatsMap = oneup_metrics:init_from_config(StatsConfig),
 
   %% TODO temp check to verify updated oneup lib
   C = oneup:new_counter(),
   0 = oneup:set(C, 123),
   123 = oneup:set(C, 10),
 
-  0 = oneup_metrics:update_metric(StatsMap, [g,b,c1,d1,ref1], 123),
-  123 = oneup_metrics:get_value('g.b.c1.d1.ref1'),
+  0 = oneup_metrics:update([g,b,c1,d1,ref1], oneup_gauge, 123),
+  123 = oneup_metrics:get('g.b.c1.d1.ref1',oneup_gauge),
 
-  [N = oneup_metrics:update_metric(StatsMap, [g,b,c2,d1,ref3], N) + 1 || N <- lists:seq(1,10)],
+  [N = oneup_metrics:update([g,b,c2,d1,ref3],oneup_gauge, N) + 1 || N <- lists:seq(1,10)],
 
-  10 = oneup_metrics:get_value('g.b.c2.d1.ref3'),
+  10 = oneup_metrics:get('g.b.c2.d1.ref3',oneup_gauge),
 
-  [spawn(oneup_metrics, update_metric, [StatsMap, [g, b, c2, d1, ref4], N]) || N <- lists:seq(1,10)],
+  [spawn(oneup_metrics, update, [[g, b, c2, d1, ref4],oneup_gauge, N]) || N <- lists:seq(1,10)],
   timer:sleep(100),
-  Ref4Value = oneup_metrics:get_value([g, b, c2, d1, ref4]),
+  Ref4Value = oneup_metrics:get([g, b, c2, d1, ref4],oneup_gauge,),
 
   case Ref4Value of
     N when N < 1 -> true = false;
@@ -203,6 +227,113 @@ gauge_test()->
     N -> ok
   end,
   application:stop(oneup_metrics).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Gauge test end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Meter test
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%TODO change to init_from_config;
+meter_test() ->
+  ct:print("Running meter_test()"),
+  StatsConfig = [{oneup_meter,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  application:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+
+  StatsMap = oneup_metrics:init_from_config(StatsConfig),
+
+
+  [0, Mean, 0, 0, 0, 0, 0, 0] = oneup_metrics:get([g,b,c1,d1,ref1],oneup_meter),
+  %ct:print("MEAN PROBLEM! ~p~n~n", [[Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate]]),
+  %0 = Counter,
+  ?assert(0 == Mean),
+  %0 = InstantRate,
+  %0 = OneMinRate,
+  %0 = FifteenMinRate,
+  %0 = FiveMinRate,
+  %0 = HourRate,
+  %0 = DayRate,
+  oneup_metrics:update([g,b,c1,d1,ref1],oneup_meter, 1000),
+  [Counter, _, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] = oneup_metrics:get([g,b,c1,d1,ref1],oneup_meter),
+  1000 = Counter ,
+  0 = InstantRate,
+  0 = OneMinRate,
+  0 =FiveMinRate,
+  0 =FifteenMinRate,
+  0 =HourRate,
+  0 =DayRate,
+
+  timer:sleep(5000),
+  [Counter_new, Mean_new, InstantRate_new, OneMinRate_new, FiveMinRate_new, FifteenMinRate_new, HourRate_new, DayRate_new] = oneup_metrics:get([g,b,c1,d1,ref1],oneup_meter),
+  0 = Counter_new,
+  ?assert(Mean_new < 300),
+  200 = InstantRate_new,
+  OneMinRate_new = tick(1,1000,0),
+  FiveMinRate_new = tick(5,1000,0),
+  FifteenMinRate_new = tick(15,1000,0),
+  HourRate_new = tick(60, 1000, 0),
+  DayRate_new = tick(1440, 1000, 0),
+  [0, 0.0, 0, 0, 0, 0, 0, 0] = oneup_metrics:get([g,b,c1,d2,ref2],oneup_meter),
+
+
+
+
+
+  timer:sleep(60000),
+  [Counter_rst, _, InstantRate_rst, OneMinRate_rst, FiveMinRate_rst, _, _, _] = oneup_metrics:get([g,b,c1,d1,ref1],oneup_meter),
+  0 = Counter_rst,
+  0 =InstantRate_rst,
+  true = OneMinRate_rst < 1,
+  true = FiveMinRate_rst > 2.6,
+  true = FiveMinRate_rst < 2.8,
+  application:stop(oneup_metrics).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Meter test end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Histogram test
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+histogram_test()->
+  ct:print("Running histogram_test()"),
+  StatsConfig = [{oneup_histogram,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  application:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+  StatsMap = oneup_metrics:init_from_config(StatsConfig),
+  {0, 0, 0, 0} = oneup_metrics:get([g,b,c1,d1,ref1],oneup_histogram),
+
+  oneup_metrics:update([g,b,c2,d1,ref3],oneup_histogram,10),
+  {1, 10, 10, 10} = oneup_metrics:get([g,b,c1,d1,ref1],oneup_histogram),
+
+  oneup_metrics:update([g,b,c2,d1,ref3],oneup_histogram,20),
+  {2, 15, 10, 20} = oneup_metrics:get([g,b,c1,d1,ref1],oneup_histogram),
+  {0, 0, 0, 0} = oneup_metrics:get([g,b,c1,d2,ref2],oneup_histogram),
+  %{oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
+  timer:sleep(60000),
+  oneup_metrics:update([g,b,c2,d1,ref3],oneup_histogram,35),
+  {2, 25, 10, 35} = oneup_metrics:get([g,b,c1,d1,ref1],oneup_histogram),
+  oneup_metrics:reset([g,b,c1,d1,ref1],oneup_histogram),
+  {0, 0, 999999999999, 0} = oneup_metrics:get([g,b,c1,d1,ref1],oneup_histogram),
+  application:stop(oneup_metrics).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Histogram test end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 direct_inc_sequential_test()->
@@ -319,3 +450,17 @@ verify_avg_time(Total, Samples, Micros) ->
   AvgTime = Total/Samples,
   ct:print("AvgTime ~p", [AvgTime]),
   ?assert(AvgTime < Micros).
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%helper functions for meter and histogram
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+alpha(Minutes)->
+  1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
+
+tick(_Minutes, Count, undefined)->
+  Count / ?INTERVAL;  %% just return instant rate
+tick(Minutes, Count, PrevRate)->
+  InstantRate = Count / ?INTERVAL,
+  PrevRate + (alpha(Minutes) * (InstantRate - PrevRate)).
