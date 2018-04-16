@@ -231,7 +231,7 @@ gauge_test()->
 
   [spawn(oneup_metrics, update, [[g, b, c2, d1, ref4],oneup_gauge, N]) || N <- lists:seq(1,10)],
   timer:sleep(100),
-  Ref4Value = oneup_metrics:get([g, b, c2, d1, ref4],oneup_gauge,),
+  Ref4Value = oneup_metrics:get([g, b, c2, d1, ref4],oneup_gauge),
 
   case Ref4Value of
     N when N < 1 -> true = false;
