@@ -17,7 +17,7 @@ init()->
   case foil_app:start() of
     {ok,_} -> case foil:new(?TABLE_NAME) of
                 ok -> ok;
-                _->lager:warning("oneup_metric_config failed to initialize")
+                _->lager:warning("oneup_metric_config failed to generate new table")
               end;
     _ ->lager:warning("oneup_metric_config failed to initialize")
   end.
