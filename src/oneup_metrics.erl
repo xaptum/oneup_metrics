@@ -128,6 +128,7 @@ handle_info(_Info, State) ->
   {noreply, State}.
 
 terminate(_Reason, _State) ->
+  oneup_metric_config:clear(),
   ok.
 
 code_change(_OldVsn, State, _Extra) ->

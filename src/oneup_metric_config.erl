@@ -11,7 +11,7 @@
 
 -define(TABLE_NAME, oneup_metrice_counter_refernce_record).
 %% API
--export([init/0, start/0, insert/2, get/2]).
+-export([init/0, start/0, insert/2, get/2,clear/0]).
 
 init()->
   case foil_app:start() of
@@ -62,3 +62,7 @@ grab_ref([Head|Tail],Type)->
 
 metric_name_to_atom(MetricName)->
   list_to_atom(string:join([atom_to_list(Part) || Part <- MetricName], ".")).
+
+clear()->
+  ok = foil:delete(?TABLE_NAME),
+  foil_app:stop().
