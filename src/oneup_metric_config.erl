@@ -51,7 +51,10 @@ grab_ref([Counter_tuple],Type)->
   case Counter_tuple of
     {Type, Counters} -> case Type of
                           oneup_histogram ->convert_to_ref_histo(Counters);
-                          _->convert_to_ref(Counters)
+                          oneup_counter -> convert_to_ref(Counters);
+                          oneup_gauge -> convert_to_ref(Counters);
+                          oneup_meter -> convert_to_ref(Counters);
+                          _->Counters
                         end;
     {_,_}-> grab_ref([],Type)
   end;
@@ -59,7 +62,10 @@ grab_ref([Head|Tail],Type)->
   case Head of
     {Type, Counters} -> case Type of
                           oneup_histogram ->convert_to_ref_histo(Counters);
-                          _->convert_to_ref(Counters)
+                          oneup_counter -> convert_to_ref(Counters);
+                          oneup_gauge -> convert_to_ref(Counters);
+                          oneup_meter -> convert_to_ref(Counters);
+                          _->Counters
                         end;
     {_,_} -> grab_ref(Tail, Type)
   end.
