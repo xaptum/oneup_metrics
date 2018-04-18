@@ -58,7 +58,7 @@ init_metric(MetricName) when is_atom(MetricName)->
   oneup_histogram_sup:start_histogram(MetricName, Counters),
   oneup_metric_config:insert(MetricName,[{oneup_histogram, Counter_list}]),
   {?MODULE, MetricName, Counters}.
-S
+
 %% This method doesn't make much sense for histograms
 update(undefined) -> ok.
 
