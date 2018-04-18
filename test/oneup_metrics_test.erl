@@ -23,6 +23,9 @@
 -define(DAY_MINUTES, ?HOUR_MINUTES * 24).
 %%@@@@@@@@@@@@@@@@@@@@@@@@@@@  EUNIT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+meter_test_()->
+  {timeout, 30, meter_test()}.
+
 
 oneup_config_test()->
   oneup_metric_config:init(),
