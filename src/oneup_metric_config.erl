@@ -79,7 +79,7 @@ clear()->
   foil_app:stop().
 
 convert_to_ref(Ref_list)->
-  Name = [Ref_list],
+  [Name] = Ref_list,
   [list_to_ref(Name)].
 
 convert_to_ref_histo(Ref_list)->
