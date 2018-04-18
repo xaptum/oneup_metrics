@@ -38,10 +38,9 @@ insert(Key,Value) when is_atom(Key)->
 get(Key,Type) when is_list(Key)->
   get(metric_name_to_atom(Key),Type);
 get(Key,Type) when is_atom(Key)->
-  try foil:lookup(?TABLE_NAME, Key) of
-  {ok, Counter_list} -> grab_ref(Counter_list, Type)
-  catch
-    error: key_not_found -> undefined
+  case foil:lookup(?TABLE_NAME, Key) of
+  {ok, Counter_list} -> grab_ref(Counter_list, Type);
+  {error, key_not_found} -> undefined
   end.
 
 
@@ -50,12 +49,18 @@ grab_ref([],Type)->
   undefined;
 grab_ref([Counter_tuple],Type)->
   case Counter_tuple of
-    {Type, Counters} -> Counters;
+    {Type, Counters} -> case Type of
+                          oneup_histogram ->convert_to_ref_histo(Counters);
+                          _->convert_to_ref(Counters)
+                        end;
     {_,_}-> grab_ref([],Type)
   end;
 grab_ref([Head|Tail],Type)->
   case Head of
-    {Type, Counters} -> Counters;
+    {Type, Counters} -> case Type of
+                          oneup_histogram ->convert_to_ref_histo(Counters);
+                          _->convert_to_ref(Counters)
+                        end;
     {_,_} -> grab_ref(Tail, Type)
   end.
 
@@ -66,3 +71,11 @@ metric_name_to_atom(MetricName)->
 clear()->
   ok = foil:delete(?TABLE_NAME),
   foil_app:stop().
+
+convert_to_ref(Ref_list)->
+  Name = [Ref_list],
+  [list_to_ref(Name)].
+
+convert_to_ref_histo(Ref_list)->
+  [Name_0,Name_1,Name_2,Name_3] = Ref_list,
+  [list_to_ref(Name_0),list_to_ref(Name_1),list_to_ref(Name_2),list_to_ref(Name_3)].
