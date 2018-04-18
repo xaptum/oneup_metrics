@@ -24,7 +24,7 @@
 %%@@@@@@@@@@@@@@@@@@@@@@@@@@@  EUNIT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 meter_test_()->
-  {timeout, 30, meter_test()}.
+  {timeout, 30, testing_meter()}.
 
 
 oneup_config_test()->
@@ -253,7 +253,7 @@ gauge_test()->
 %%%Meter test
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %TODO change to init_from_config;
-meter_test() ->
+testing_meter() ->
   ct:print("Running meter_test()"),
   StatsConfig = [{oneup_meter,
     [ [g,b,c1,d1,ref1],
