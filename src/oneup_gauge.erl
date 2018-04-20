@@ -45,7 +45,7 @@ init_metric(MetricName) when is_list(MetricName)->
 init_metric(MetricName)->
   Gauge = oneup:new_counter(),
   lager:info("Starting gauge ~p", [MetricName]),
-  oneup_metric_config:insert(MetricName,[{oneup_gauge, [ref_to_list(Gauge)]}]),
+  oneup_metric_config:insert(MetricName,[{oneup_gauge, [Gauge]}]),
   oneup_gauge_sup:start_gauge(MetricName, Gauge),
   {?MODULE, MetricName, Gauge}.
 

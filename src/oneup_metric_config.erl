@@ -49,24 +49,12 @@ grab_ref([],Type)->
   undefined;
 grab_ref([Counter_tuple],Type)->
   case Counter_tuple of
-    {Type, Counters} -> case Type of
-                          oneup_histogram ->convert_to_ref_histo(Counters);
-                          oneup_counter -> convert_to_ref(Counters);
-                          oneup_gauge -> convert_to_ref(Counters);
-                          oneup_meter -> convert_to_ref(Counters);
-                          _->Counters
-                        end;
+    {Type, Counters} -> Counters;
     {_,_}-> grab_ref([],Type)
   end;
 grab_ref([Head|Tail],Type)->
   case Head of
-    {Type, Counters} -> case Type of
-                          oneup_histogram ->convert_to_ref_histo(Counters);
-                          oneup_counter -> convert_to_ref(Counters);
-                          oneup_gauge -> convert_to_ref(Counters);
-                          oneup_meter -> convert_to_ref(Counters);
-                          _->Counters
-                        end;
+    {Type, Counters} -> Counters;
     {_,_} -> grab_ref(Tail, Type)
   end.
 
@@ -78,10 +66,3 @@ clear()->
   ok = foil:delete(?TABLE_NAME),
   foil_app:stop().
 
-convert_to_ref(Ref_list)->
-  [Name] = Ref_list,
-  [list_to_ref(Name)].
-
-convert_to_ref_histo(Ref_list)->
-  [Name_0,Name_1,Name_2,Name_3] = Ref_list,
-  [list_to_ref(Name_0),list_to_ref(Name_1),list_to_ref(Name_2),list_to_ref(Name_3)].

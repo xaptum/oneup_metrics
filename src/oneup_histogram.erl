@@ -52,11 +52,9 @@ init_metric(MetricName) when is_atom(MetricName)->
     MinCounterRef = oneup:new_counter(),
     _MaxCounterRef = oneup:new_counter()
   ],
-  Counter_list = [ref_to_list(_ValueAggregateCounterRef), ref_to_list(_OccurenceCounterRef),
-                  ref_to_list(MinCounterRef), ref_to_list(_MaxCounterRef)],
   oneup:set(MinCounterRef, ?UNDEFINED_MIN),
   oneup_histogram_sup:start_histogram(MetricName, Counters),
-  oneup_metric_config:insert(MetricName,[{oneup_histogram, Counter_list}]),
+  oneup_metric_config:insert(MetricName,[{oneup_histogram, Counters}]),
   {?MODULE, MetricName, Counters}.
 
 %% This method doesn't make much sense for histograms
