@@ -21,7 +21,8 @@
 -export([start_link/1,
   get_value/1,
   reset/1,
-  display/1]).
+  display/1,
+  get_sub_metrics/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -143,12 +144,14 @@ metric_name_to_atom(MetricName)->
 %%% If this sounds like a blasphemous Erlang antipattern to you, please recall this
 %%% library is based on global counters which are an Erlang blasphemy to begin with ;)
 %%% no need to worry about bottlenecks
-config()->
-  case erlang:get(?METRICS_MAP) of
+config(MetricsMapKey) ->
+  case erlang:get(MetricsMapKey) of
     undefined -> lager:warning("Metrics not enabled in process ~p ~p", [self(), process_info(self(), registered_name)]);
     MetricsMap -> MetricsMap
   end.
 
+config()->
+  config(?METRICS_MAP).
 
 init_from_config(Config) when is_list(Config)->
   lists:foldl(fun(Type, AllMetrics) -> add_metrics({Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
