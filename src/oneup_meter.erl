@@ -126,7 +126,7 @@ handle_call(display, _From, #state{counter = CounterRef,
     Duration when Duration =/= 0 -> LifetimeTotal / Duration;
     Duration when Duration =:= 0 -> 0
   end,
-  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~-20w~-20w~-20w~-20w~n",
+  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
     ["meter", DisplayName, Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
   {reply, DisplayMeterValues, State}.
 

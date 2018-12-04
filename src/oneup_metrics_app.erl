@@ -53,13 +53,16 @@ start_http_reporter(HttpPort)->
   {ok, SystemInfoConfig} = application:get_env(system_info_config),
   lager:info("Starting oneup stats http server on ~p with system_info_config ~p", [HttpPort, SystemInfoConfig]),
 
+  CustomHandlers = application:get_env(oneup_metrics, custom_handler_config, []),
+
   Dispatch = cowboy_router:compile([
     {'_', [
       {"/system_info", system_info_handler, SystemInfoConfig},
       {"/system_info/[...]", system_info_handler, SystemInfoConfig},
       {"/", oneup_metrics_handler, []},
       {"/[...]", oneup_metrics_handler, []}
-    ]}
+    ] ++ CustomHandlers
+    }
   ]),
   Result = cowboy:start_clear(http, [{port, HttpPort}], #{env => #{dispatch => Dispatch}}),
   case Result of
