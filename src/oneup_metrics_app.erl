@@ -56,12 +56,14 @@ start_http_reporter(HttpPort)->
   CustomHandlers = application:get_env(oneup_metrics, custom_handler_config, []),
 
   Dispatch = cowboy_router:compile([
-    {'_', [
-      {"/system_info", system_info_handler, SystemInfoConfig},
-      {"/system_info/[...]", system_info_handler, SystemInfoConfig},
-      {"/", oneup_metrics_handler, []},
-      {"/[...]", oneup_metrics_handler, []}
-    ] ++ CustomHandlers
+    {'_',
+        CustomHandlers ++
+        [
+          {"/system_info", system_info_handler, SystemInfoConfig},
+          {"/system_info/[...]", system_info_handler, SystemInfoConfig},
+          {"/", oneup_metrics_handler, []},
+          {"/[...]", oneup_metrics_handler, []}
+        ]
     }
   ]),
   Result = cowboy:start_clear(http, [{port, HttpPort}], #{env => #{dispatch => Dispatch}}),
