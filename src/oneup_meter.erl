@@ -110,7 +110,7 @@ handle_call(get, _From, #state{
   Mean = LifetimeTotal / max(oneup_metrics:current_second() - Start, 1),
   Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
   {reply, Ret, State};
-handle_call(display, _From, #state{counter = CounterRef,
+handle_call({display, Domain}, _From, #state{counter = CounterRef,
                                     display_name = DisplayName,
                                     start = Start,
                                     lifetime_total = LifetimeTotal,
@@ -127,7 +127,7 @@ handle_call(display, _From, #state{counter = CounterRef,
     Duration when Duration =:= 0 -> 0
   end,
   DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
-    ["meter", DisplayName, Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
+    ["meter", lists:subtract(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
   {reply, DisplayMeterValues, State}.
 
 handle_cast(_Request, State) ->

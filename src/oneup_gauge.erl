@@ -76,9 +76,9 @@ handle_call(get, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:get(GaugeRef), State};
 handle_call(reset, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:set(GaugeRef, 0), State};
-handle_call(display, _From, #state{gauge = GaugeRef, display_name = DisplayName} = State) ->
+handle_call({display, Domain}, _From, #state{gauge = GaugeRef, display_name = DisplayName} = State) ->
   CounterValue = oneup:get(GaugeRef),
-  DisplayString = io_lib:format("~-15s~-50s~-20w~n", ["gauge", DisplayName, CounterValue]),
+  DisplayString = io_lib:format("~-15s~-50s~-20w~n", ["gauge", lists:subtract(DisplayName, Domain), CounterValue]),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->

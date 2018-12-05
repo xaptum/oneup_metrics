@@ -96,7 +96,7 @@ handle_call(reset, _From, #state{value_aggr = ValueAggregateCounterRef, samples 
   oneup:set(MinRef, ?UNDEFINED_MIN),
   oneup:set(MaxRef, 0),
   {reply, ok, State#state{prev_value = 0, prev_samples = 0}};
-handle_call(display, _From, #state{
+handle_call({display, Domain}, _From, #state{
   prev_value = PrevValueAvg,   prev_samples = PrevSamples,
   value_aggr = CurrValueAggrRef,  samples = CurrSamples,
   min = Min, max = Max,
@@ -105,7 +105,7 @@ handle_call(display, _From, #state{
   Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
   Mean = avg(Values, Samples),
   DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
-    ["histogram", DisplayName,
+    ["histogram", lists:subtract(DisplayName, Domain),
       Samples, min(oneup:get(Min)), Mean, oneup:get(Max)])),
   {reply, DisplayHistogram, State}.
 

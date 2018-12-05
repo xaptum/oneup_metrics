@@ -18,11 +18,15 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1,
+-export([
+  start_link/1,
   get_value/1,
   reset/1,
+  reset/2,
   display/1,
-  get_sub_metrics/2]).
+  display/2,
+  get_sub_metrics/2,
+  evaluated_metrics/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -135,14 +139,18 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 metric_name_to_atom(MetricName)->
-  list_to_atom(string:join([atom_to_list(Part) || Part <- MetricName], ".")).
+  list_to_atom(string:join([maybe_atom_to_list(Part) || Part <- MetricName], ".")).
+
+
+maybe_atom_to_list(Part) when is_binary(Part)-> maybe_atom_to_list(binary_to_list(Part));
+maybe_atom_to_list(Part) when is_list(Part)-> Part;
+maybe_atom_to_list(Part) when is_atom(Part)-> atom_to_list(Part).
 
 
 %%% Metrics Map is expected to be in the process dictionary of any process that got it
 %%% from its supervisor or parent process
 %%% All the update methods in this module depend on this being the case
-%%% If this sounds like a blasphemous Erlang antipattern to you, please recall this
-%%% library is based on global counters which are an Erlang blasphemy to begin with ;)
+%%% However, update_metrics methods don't -- they just take a MetricsMap as first argument
 %%% no need to worry about bottlenecks
 config(MetricsMapKey) ->
   case erlang:get(MetricsMapKey) of
@@ -153,11 +161,15 @@ config(MetricsMapKey) ->
 config()->
   config(?METRICS_MAP).
 
-init_from_config(Config) when is_list(Config)->
-  lists:foldl(fun(Type, AllMetrics) -> add_metrics({Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
+init_from_config(Config) ->
+  init_from_config([global], Config).
 
-add_metrics({Type, NewMetrics}, InitialMetrics)->
-  SpecificTypeMetrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
+init_from_config(Domain, Config) when is_list(Config), is_list(Domain) ->
+  lists:foldl(fun(Type, AllMetrics) -> add_metrics(Domain, {Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
+
+
+add_metrics(Domain, {Type, NewMetrics}, InitialMetrics) ->
+  SpecificTypeMetrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Domain ++ Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
   lager:info("~p metrics initialized to ~p", [Type, SpecificTypeMetrics]),
   SpecificTypeMetrics.
 
@@ -187,20 +199,37 @@ add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
   end.
 
 
+
+get_value(Domain, MetricName) when is_atom(Domain) ->
+  get_value([Domain] ++ MetricName);
+get_value(Domain, MetricName) when is_list(Domain)->
+  get_value(Domain ++ MetricName).
+
 get_value(MetricName) when is_list(MetricName)->
   get_value(metric_name_to_atom(MetricName));
 get_value(MetricName) when is_atom(MetricName)->
   gen_server:call(MetricName, get).
+
+
+reset(Domain, MetricName) when is_atom(Domain)->
+  reset([Domain] ++ MetricName);
+reset(Domain, MetricName) when is_list(Domain)->
+  reset(Domain ++ MetricName).
 
 reset(MetricName) when is_list(MetricName)->
   reset(metric_name_to_atom(MetricName));
 reset(MetricName) when is_atom(MetricName)->
   gen_server:call(MetricName, reset).
 
-display(MetricName) when is_list(MetricName)->
-  display(metric_name_to_atom(MetricName));
-display(MetricName) when is_atom(MetricName)->
-  gen_server:call(MetricName, display).
+display(MetricName)->
+  display([], MetricName).
+
+display(Domain, MetricName) when is_atom(Domain) ->
+  display([Domain], MetricName);
+display(Domain, MetricName) when is_list(Domain), is_list(MetricName)->
+  display(Domain, metric_name_to_atom(Domain ++ MetricName));
+display(Domain, MetricName) when is_atom(MetricName)->
+  gen_server:call(MetricName, {display, Domain}).
 
 update({Type, CounterRef}) when is_atom(Type)->
   Type:update(CounterRef);
@@ -283,3 +312,19 @@ reset_counter(Val) when is_map(Val)->
 current_second() ->
   {Mega, Sec, _Micro} = os:timestamp(),
   (Mega * 1000000 + Sec).
+
+evaluated_metrics(MetricsMap) ->
+  MetricsMap.
+
+%% TODO CREATE A NEW MAP from original metrics, the one with all ref counters evaluated.
+%%evaluate_metrics(MetricsMap) when is_map(MetricsMap)->
+%%  evaluate_metrics(MetricsMap, maps:new()).
+%%
+%%evaluate_metrics(OriginalMetricsMap, EvaluatedMetricsMap) ->
+%%  maps:fold(fun(Key, Val, Acc) -> evaluate_metric(Val, Acc) end, EvaluatedMetricsMap, OriginalMetricsMap).
+%%
+%%evaluate_metric(Key, {_MetricType, MetricName, _Counters}, EvaluatedMetricsMap)  ->
+%%  UpdatedMap = maps:update(MetricName, oneup_metrics:get_metric_values(MetricName))
+%%  Body ++ oneup_metrics:display(MetricName);
+%%evaluate_metric(Val, Body) when is_map(Val)->
+%%  evaluate_metrics(Val, Body).
