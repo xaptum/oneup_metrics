@@ -44,6 +44,7 @@
 -define(DAY_MINUTES, ?HOUR_MINUTES * 24).
 
 -record(state, {
+  domain = [],
   display_name,
   counter,
   start,
@@ -69,12 +70,17 @@ start_link(MetricName, CounterRef) when is_atom(MetricName) ->
 %%%===================================================================
 
 init_metric(MetricName) when is_list(MetricName)->
-  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
-  init_metric(MetricNameAtom);
-init_metric(MetricName) when is_atom(MetricName)->
+  init_metric([], MetricName);
+init_metric(MetricName) when is_atom(MetricName) ->
   Counter = oneup:new_counter(),
   oneup_meter_sup:start_meter(MetricName, Counter),
   {?MODULE, MetricName, Counter}.
+
+init_metric(Domain, MetricName) when is_atom(Domain)->
+  init_metric([Domain], MetricName);
+init_metric(Domain, MetricName) when is_list(Domain), is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(Domain ++ MetricName),
+  init_metric(MetricNameAtom).
 
 update(CounterRef)->
   oneup:inc(CounterRef).
@@ -85,7 +91,6 @@ update(CounterRef, Value) when is_integer(Value) ->
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
-
 
 
 %%%===================================================================

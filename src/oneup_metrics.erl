@@ -167,35 +167,37 @@ init_from_config(Config) ->
 init_from_config(Domain, Config) when is_list(Config), is_list(Domain) ->
   lists:foldl(fun(Type, AllMetrics) -> add_metrics(Domain, {Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
 
+add_metrics({Type, NewMetrics}, InitialMetrics) ->
+  add_metrics([], {Type, NewMetrics}, InitialMetrics).
 
 add_metrics(Domain, {Type, NewMetrics}, InitialMetrics) ->
-  SpecificTypeMetrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric({Type, Domain ++ Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
+  SpecificTypeMetrics = lists:foldl(fun(Metric, AllMetrics) -> add_metric(Domain, {Type, Metric}, AllMetrics) end, InitialMetrics, NewMetrics),
   lager:info("~p metrics initialized to ~p", [Type, SpecificTypeMetrics]),
   SpecificTypeMetrics.
 
-add_metric({Type, Metric}, AllMetrics) when is_list(Metric)->
-  add_nested_metric(AllMetrics, Metric, Metric, Type).
+add_metric(Domain, {Type, Metric}, AllMetrics) when is_list(Metric)->
+  add_nested_metric(Domain, AllMetrics, Metric, Metric, Type).
 
 %% Please note that it would've been more elegant to pattern-match
 %% in function args instead of case metric elements but it doesn't work with maps
 %% due to non-guaranteed order of argument resolution
 
 %% Reached the end of metric-name list, initialize the metric
-add_nested_metric(Metrics, Metric, [Last], Type) when is_map(Metrics), is_atom(Type)->
+add_nested_metric(Domain, Metrics, Metric, [Last], Type) when is_map(Metrics), is_atom(Type)->
   case Metrics of
     #{Last := {Type, _MetricName, _ExistingCounter} } when is_atom(Type) ->
       lager:error("Duplicate entry in metrics config: ~p!  Exiting...", [Metric]),
       true = false;
     _ ->
-      lager:info("Adding metric ~p", [Metric]),
-      Metrics#{Last => Type:init_metric(Metric) }
+      lager:info("Adding metric ~p@~p", [Domain, Metric]),
+      Metrics#{Last => Type:init_metric(Domain, Metric) }
   end;
-add_nested_metric(Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
+add_nested_metric(Domain, Metrics, Metric, [Head | Tail], Type) when is_map(Metrics)->
   case Metrics of
     %% Existing entry
-    #{ Head := NestedMetrics} -> Metrics#{Head => add_nested_metric(NestedMetrics, Metric, Tail, Type)};
+    #{ Head := NestedMetrics} -> Metrics#{Head => add_nested_metric(Domain, NestedMetrics, Metric, Tail, Type)};
     %% First encounter of this entry
-    _ -> Metrics#{Head => add_nested_metric(#{}, Metric, Tail, Type)}
+    _ -> Metrics#{Head => add_nested_metric(Domain, #{}, Metric, Tail, Type)}
   end.
 
 

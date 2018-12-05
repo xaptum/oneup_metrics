@@ -43,8 +43,7 @@
 %%%===================================================================
 
 init_metric(MetricName) when is_list(MetricName)->
-  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
-  init_metric(MetricNameAtom);
+  init_metric([], MetricName);
 init_metric(MetricName) when is_atom(MetricName)->
   Counters = [
     _ValueAggregateCounterRef = oneup:new_counter(),
@@ -55,6 +54,13 @@ init_metric(MetricName) when is_atom(MetricName)->
   oneup:set(MinCounterRef, ?UNDEFINED_MIN),
   oneup_histogram_sup:start_histogram(MetricName, Counters),
   {?MODULE, MetricName, Counters}.
+
+init_metric(Domain, MetricName) when is_atom(Domain)->
+  init_metric([Domain], MetricName);
+init_metric(Domain, MetricName) when is_list(Domain), is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(Domain ++ MetricName),
+  init_metric(MetricNameAtom).
+
 
 %% This method doesn't make much sense for histograms
 update(undefined) -> ok.

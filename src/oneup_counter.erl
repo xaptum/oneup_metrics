@@ -35,13 +35,19 @@
 
 -record(state, {counter, display_name}).
 
+
 init_metric(MetricName) when is_list(MetricName)->
-  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
-  init_metric(MetricNameAtom);
+  init_metric([], MetricName);
 init_metric(MetricName) when is_atom(MetricName) ->
   CounterRef = oneup:new_counter(),
   oneup_counter_sup:start_counter(MetricName, CounterRef),
   {?MODULE, MetricName, CounterRef}.
+
+init_metric(Domain, MetricName) when is_atom(Domain)->
+  init_metric([Domain], MetricName);
+init_metric(Domain, MetricName) when is_list(Domain), is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(Domain ++ MetricName),
+  init_metric(MetricNameAtom).
 
 update(CounterRef)->
    oneup:inc(CounterRef).

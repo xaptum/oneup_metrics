@@ -39,14 +39,21 @@
 %%% oneup_metrics callbacks
 %%%===================================================================
 
+
 init_metric(MetricName) when is_list(MetricName)->
-  MetricNameAtom = oneup_metrics:metric_name_to_atom(MetricName),
-  init_metric(MetricNameAtom);
-init_metric(MetricName)->
+  init_metric([], MetricName);
+init_metric(MetricName) when is_atom(MetricName) ->
   Gauge = oneup:new_counter(),
   lager:info("Starting gauge ~p", [MetricName]),
   oneup_gauge_sup:start_gauge(MetricName, Gauge),
   {?MODULE, MetricName, Gauge}.
+
+init_metric(Domain, MetricName) when is_atom(Domain)->
+  init_metric([Domain], MetricName);
+init_metric(Domain, MetricName) when is_list(Domain), is_list(MetricName)->
+  MetricNameAtom = oneup_metrics:metric_name_to_atom(Domain ++ MetricName),
+  init_metric(MetricNameAtom).
+
 
 %% This method doesn't make a lot of sense for gauges
 update(CounterRef)->
