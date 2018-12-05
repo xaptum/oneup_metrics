@@ -131,7 +131,7 @@ handle_call({display, Domain}, _From, #state{counter = CounterRef,
     Duration when Duration =/= 0 -> LifetimeTotal / Duration;
     Duration when Duration =:= 0 -> 0
   end,
-  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
+  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20w~-20w~-20w~-20w~-20w~-20w~n",
     ["meter", lists:subtract(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
   {reply, DisplayMeterValues, State}.
 
