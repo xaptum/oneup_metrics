@@ -115,7 +115,10 @@ handle_call({metrics, Prefix}, _From, #state{metrics = Metrics} = State) when is
   SubMetrics = get_sub_metrics(Metrics, Prefix),
   {reply, {ok, SubMetrics}, State};
 handle_call({add, Metric}, _From, #state{ metrics = Metrics } = State)->
-  ExpandedMetrics = add_metric(Metric, Metrics),
+  ExpandedMetrics = add_metric([], Metric, Metrics),
+  {reply, {ok, ExpandedMetrics}, State#state{metrics = ExpandedMetrics}};
+handle_call({add, Domain, Metric}, _From, #state{ metrics = Metrics } = State)->
+  ExpandedMetrics = add_metric(Domain, Metric, Metrics),
   {reply, {ok, ExpandedMetrics}, State#state{metrics = ExpandedMetrics}};
 handle_call({add_multiple, NewMetrics}, _From, #state{ metrics = Metrics } = State)->
   ExpandedMetrics = add_metrics(NewMetrics, Metrics),
