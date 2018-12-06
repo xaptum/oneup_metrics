@@ -22,6 +22,7 @@
 %% oneup_metrics callbacks
 -export([
   init_metric/1,
+  init_metric/2,
   update/1,
   update/2,
   header/0]).

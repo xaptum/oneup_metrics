@@ -165,7 +165,7 @@ config()->
   config(?METRICS_MAP).
 
 init_from_config(Config) ->
-  init_from_config([global], Config).
+  init_from_config([], Config).
 
 init_from_config(Domain, Config) when is_list(Config), is_list(Domain) ->
   lists:foldl(fun(Type, AllMetrics) -> add_metrics(Domain, {Type, proplists:get_value(Type, Config)}, AllMetrics) end, #{}, proplists:get_keys(Config)).
