@@ -40,6 +40,7 @@ process_request(#{path_info := [<<"reset">>|PathBinTail]} = Req, [MetricsMap] = 
   RespBody = apply_to_metrics(PathBinTail, MetricsMap, fun oneup_metrics:reset_counters/1),
   {RespBody, Req, State};
 process_request(#{path_info := PathBinList} = Req, [MetricsMap] = State) when is_map(MetricsMap) ->
+  lager:info("Processing Request ~p", [Req]),
   RespBody = apply_to_metrics(PathBinList, MetricsMap, fun oneup_metrics_handler:display_metrics/1),
   {RespBody, Req, State}.
 
@@ -56,7 +57,9 @@ apply_to_metrics(PathBinList, MetricsMap, Fun)->
         end;
       PathAtomList -> print_invalid_request(PathAtomList)
     catch
-      Error:Error -> print_invalid_request(Error)
+      Error:Error ->
+        lager:error("~p:~p when PathBinList is ~p", [PathBinList]),
+        print_invalid_request(Error)
     end.
 
 print_invalid_request(Arg)->
