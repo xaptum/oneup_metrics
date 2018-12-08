@@ -23,8 +23,8 @@
   get_value/1,
   reset/1,
   reset/2,
-  display/1,
-  display/2,
+  display/3,
+  display/4,
   get_sub_metrics/2,
   evaluated_metrics/1]).
 
@@ -100,7 +100,6 @@ add(NewMetric) ->
 
 start_link(MetricsMap) ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [MetricsMap], []).
-
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -226,15 +225,20 @@ reset(MetricName) when is_list(MetricName)->
 reset(MetricName) when is_atom(MetricName)->
   gen_server:call(MetricName, reset).
 
-display(MetricName)->
-  display([], MetricName).
+display(MetricType, MetricName, Values)->
+  display(MetricType, MetricName,[], Values).
 
-display(Domain, MetricName) when is_atom(Domain) ->
-  display([Domain], MetricName);
-display(Domain, MetricName) when is_list(Domain), is_list(MetricName)->
-  display(Domain, metric_name_to_atom(Domain ++ MetricName));
-display(Domain, MetricName) when is_atom(MetricName)->
-  gen_server:call(MetricName, {display, Domain}).
+display(MetricType, MetricName, Domain, Values) when is_atom(Domain) ->
+  display(MetricType, [Domain], MetricName, Values);
+display(MetricType, MetricName,  Domain, Values) when is_list(Domain), is_list(MetricName)->
+  display(MetricType, metric_name_to_atom(Domain ++ MetricName), Domain, Values);
+display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
+  case whereis(MetricName) of
+    undefined ->
+      MetricType:display(MetricName, Domain, Values); %% use finalized and stored values
+    RunningPid when is_pid(RunningPid) ->
+      gen_server:call(MetricName, {display, Domain}) %% evaluate
+  end.
 
 update({Type, CounterRef}) when is_atom(Type)->
   Type:update(CounterRef);
@@ -318,8 +322,12 @@ current_second() ->
   {Mega, Sec, _Micro} = os:timestamp(),
   (Mega * 1000000 + Sec).
 
-evaluated_metrics(MetricsMap) ->
-  MetricsMap.
+evaluated_metrics(MetricsMap) when is_map(MetricsMap)->
+  Fun = fun(K,V, Acc) -> maps:put(K, evaluate_metrics(V), Acc) end,
+  maps:fold(Fun,#{},MetricsMap);
+evaluated_metrics({Type, RegName, _Refs}) ->
+  Value = gen_server:call(RegName, get),
+  {Type, RegName, Value}.
 
 %% TODO CREATE A NEW MAP from original metrics, the one with all ref counters evaluated.
 %%evaluate_metrics(MetricsMap) when is_map(MetricsMap)->

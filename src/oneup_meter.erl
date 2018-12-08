@@ -21,7 +21,8 @@
   init_metric/2,
   update/1,
   update/2,
-  header/0]).
+  header/0,
+  display/3]).
 
 
 %% gen_server callbacks
@@ -93,6 +94,9 @@ header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
 
+display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])->
+    lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20w~-20w~-20w~-20w~-20w~-20w~n",
+      ["meter", lists:subtract(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -132,8 +136,8 @@ handle_call({display, Domain}, _From, #state{counter = CounterRef,
     Duration when Duration =/= 0 -> LifetimeTotal / Duration;
     Duration when Duration =:= 0 -> 0
   end,
-  DisplayMeterValues = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20w~-20w~-20w~-20w~-20w~-20w~n",
-    ["meter", lists:subtract(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])),
+  DisplayMeterValues = display(DisplayName, Domain,
+    [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate]),
   {reply, DisplayMeterValues, State}.
 
 handle_cast(_Request, State) ->

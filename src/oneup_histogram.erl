@@ -25,7 +25,8 @@
   init_metric/2,
   update/1,
   update/2,
-  header/0]).
+  header/0,
+  display/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -77,6 +78,11 @@ header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~n",
     ["histogram", "", "samples", "min", "mean", "max"])).
 
+display(DisplayName, Domain, {Samples, Mean, Min, Max})->
+  lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
+    ["histogram", lists:subtract(DisplayName, Domain),
+      Samples, min(oneup:get(Min)), Mean, oneup:get(Max)])).
+
 %%%===================================================================
 %%% gen_server API
 %%%===================================================================
@@ -111,10 +117,8 @@ handle_call({display, Domain}, _From, #state{
   Samples = PrevSamples + oneup:get(CurrSamples),
   Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
   Mean = avg(Values, Samples),
-  DisplayHistogram = lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
-    ["histogram", lists:subtract(DisplayName, Domain),
-      Samples, min(oneup:get(Min)), Mean, oneup:get(Max)])),
-  {reply, DisplayHistogram, State}.
+  DisplayedHistogram = display(DisplayName, Domain, {Samples, Mean, Min, Max}),
+  {reply, DisplayedHistogram, State}.
 
 
 handle_cast(_Request, State) ->

@@ -71,14 +71,17 @@ header()->
 display_metric_name(MetricName)->
   string:join([atom_to_list(Element) || Element <- MetricName], ".").
 
-display_metrics(MetricsMap) when is_map(MetricsMap)->
-  Body = header() ++ display_metrics(MetricsMap, ""),
+display_metrics(MetricsMap) ->
+  display_metrics(MetricsMap, []).
+
+display_metrics(MetricsMap, Domain) when is_map(MetricsMap)->
+  Body = header() ++ display_metrics(MetricsMap, Domain, ""),
   list_to_binary(Body).
 
-display_metrics(MetricsMap, Body) ->
-  maps:fold(fun(_Key, Val, Acc) -> display_metric(Val, Acc) end, Body, MetricsMap).
+display_metrics(MetricsMap, Domain, Body) ->
+  maps:fold(fun(_Key, Val, Acc) -> display_metric(Val, Domain, Acc) end, Body, MetricsMap).
 
-display_metric({_MetricType, MetricName, _Counters}, Body)  ->
-  Body ++ oneup_metrics:display(MetricName);
+display_metric({MetricType, MetricName, Counters}, Domain, Body)  ->
+  Body ++ oneup_metrics:display(MetricType, MetricName, Counters);
 display_metric(Val, Body) when is_map(Val)->
   display_metrics(Val, Body).

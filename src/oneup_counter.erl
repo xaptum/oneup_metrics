@@ -22,7 +22,8 @@
   init_metric/2,
   update/1,
   update/2,
-  header/0]).
+  header/0,
+  display/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -59,6 +60,8 @@ update(CounterRef, Value) when is_integer(Value) ->
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["counter", "", "count"])).
 
+display(DisplayName, Domain, CounterValue)->
+  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(DisplayName, Domain), CounterValue])).
 
 %%%===================================================================
 %%% gen_server API
@@ -81,7 +84,7 @@ handle_call(reset, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:set(CounterRef, 0), State};
 handle_call({display, Domain}, _From, #state{counter = CounterRef, display_name = DisplayName} = State) ->
   CounterValue =  oneup:get(CounterRef),
-  DisplayString = io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(DisplayName, Domain), CounterValue]),
+  DisplayString = lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(DisplayName, Domain), CounterValue])),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->
