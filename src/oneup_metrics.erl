@@ -323,21 +323,8 @@ current_second() ->
   (Mega * 1000000 + Sec).
 
 evaluated_metrics(MetricsMap) when is_map(MetricsMap)->
-  Fun = fun(K,V, Acc) -> maps:put(K, evaluate_metrics(V), Acc) end,
+  Fun = fun(K,V, Acc) -> maps:put(K, evaluated_metrics(V), Acc) end,
   maps:fold(Fun,#{},MetricsMap);
 evaluated_metrics({Type, RegName, _Refs}) ->
   Value = gen_server:call(RegName, get),
   {Type, RegName, Value}.
-
-%% TODO CREATE A NEW MAP from original metrics, the one with all ref counters evaluated.
-%%evaluate_metrics(MetricsMap) when is_map(MetricsMap)->
-%%  evaluate_metrics(MetricsMap, maps:new()).
-%%
-%%evaluate_metrics(OriginalMetricsMap, EvaluatedMetricsMap) ->
-%%  maps:fold(fun(Key, Val, Acc) -> evaluate_metric(Val, Acc) end, EvaluatedMetricsMap, OriginalMetricsMap).
-%%
-%%evaluate_metric(Key, {_MetricType, MetricName, _Counters}, EvaluatedMetricsMap)  ->
-%%  UpdatedMap = maps:update(MetricName, oneup_metrics:get_metric_values(MetricName))
-%%  Body ++ oneup_metrics:display(MetricName);
-%%evaluate_metric(Val, Body) when is_map(Val)->
-%%  evaluate_metrics(Val, Body).

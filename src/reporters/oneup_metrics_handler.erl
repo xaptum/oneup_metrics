@@ -82,6 +82,6 @@ display_metrics(MetricsMap, Domain, Body) ->
   maps:fold(fun(_Key, Val, Acc) -> display_metric(Val, Domain, Acc) end, Body, MetricsMap).
 
 display_metric({MetricType, MetricName, Counters}, Domain, Body)  ->
-  Body ++ oneup_metrics:display(MetricType, MetricName, Counters);
-display_metric(Val, Body) when is_map(Val)->
-  display_metrics(Val, Body).
+  Body ++ oneup_metrics:display(MetricType, MetricName, Domain, Counters);
+display_metric(Val, Domain, Body) when is_map(Val)->
+  display_metrics(Val, Domain, Body).

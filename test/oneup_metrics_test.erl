@@ -122,7 +122,7 @@ init_from_config_test() ->
 
 counter_test()->
 
-  ct:print("Running counter_test()"),
+  io:format("RUNNING CUNTER_TEST()~n"),
 
   StatsConfig = [{oneup_counter,
     [ [a,b,c1,d1,ref1],
@@ -175,7 +175,7 @@ counter_test()->
   application:stop(oneup_metrics).
 
 gauge_test()->
-  ct:print("Running gauge_test()"),
+  io:format("RUNNING GAUGE_TEST()~n"),
 
   StatsConfig = [{oneup_gauge,
     [ [g,b,c1,d1,ref1],
@@ -211,11 +211,48 @@ gauge_test()->
     N when N > 10 -> true = false;
     N -> ok
   end,
+  RealizedMap = oneup_metrics:evaluated_metrics(StatsMap),
+  ct:print("ATTENTION: GAUGE REALIZED METRICS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!~n"),
+  Body = oneup_metrics_handler:display_metrics(RealizedMap),
+  ct:print("~p~n", [Body]),
   application:stop(oneup_metrics).
 
 
+
+histogram_test()->
+  io:format("RUNNING HISTO TEST()~n"),
+  StatsConfig = [{oneup_histogram,
+    [ [g,b,c1,d1,ref1],
+      [g,b,c1,d2,ref2]]}],
+  application:ensure_all_started(lager),
+  application:set_env(oneup_metrics, metrics_config, StatsConfig),
+  application:ensure_all_started(oneup_metrics),
+
+
+  StatsMap = oneup_metrics:initial_get_config(),
+  oneup_metrics:enable(StatsMap),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],10),
+  {1, 10, 10, 10} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],20),
+  {2, 15, 10, 20} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d2,ref2]),
+  %{oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
+  timer:sleep(60000),
+  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],35),
+  {2, 25, 10, 35} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  oneup_metrics:reset([g,b,c1,d1,ref1]),
+  {0, 0, 999999999999, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
+  RealizedMap = oneup_metrics:evaluated_metrics(StatsMap),
+  ct:print("ATTENTION: HISTO REALIZED METRICS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!~n"),
+  Body = oneup_metrics_handler:display_metrics(RealizedMap),
+  ct:print("~p~n", [Body]),
+  application:stop(oneup_metrics).
+
+
+
 meter_test() ->
-  ct:print("Running meter_test()"),
+  io:format("RUNNING METER_TEST()~n"),
   StatsConfig = [{oneup_meter,
     [ [g,b,c1,d1,ref1],
       [g,b,c1,d2,ref2]]}],
@@ -259,11 +296,7 @@ meter_test() ->
   DayRate_new = tick(1440, 1000, 0),
   [0, 0.0, 0, 0, 0, 0, 0, 0] = oneup_metrics:get_value([g,b,c1,d2,ref2]),
 
-
-
-
-
-  timer:sleep(60000),
+  timer:sleep(10000),
   [Counter_rst, _, InstantRate_rst, OneMinRate_rst, FiveMinRate_rst, _, _, _] = oneup_metrics:get_value([g,b,c1,d1,ref1]),
   0 = Counter_rst,
   0 =InstantRate_rst,
@@ -273,32 +306,6 @@ meter_test() ->
   application:stop(oneup_metrics).
 
 
-
-histogram_test()->
-  ct:print("Running histogram_test()"),
-  StatsConfig = [{oneup_histogram,
-    [ [g,b,c1,d1,ref1],
-      [g,b,c1,d2,ref2]]}],
-  application:ensure_all_started(lager),
-  application:set_env(oneup_metrics, metrics_config, StatsConfig),
-  application:ensure_all_started(oneup_metrics),
-
-
-  StatsMap = oneup_metrics:initial_get_config(),
-  oneup_metrics:enable(StatsMap),
-  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],10),
-  {1, 10, 10, 10} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],20),
-  {2, 15, 10, 20} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  {0, 0, 0, 0} = oneup_metrics:get_value([g,b,c1,d2,ref2]),
-  %{oneup_histogram, 'a.b.c1.d1.ref1', Val_ref, Sample_ref, Min_ref, Max_ref} = oneup_metrics:get_metric(StatsMap, [a, b, c1, d1, ref1]),
-  timer:sleep(60000),
-  oneup_metrics:update(StatsMap, [g,b,c2,d1,ref3],35),
-  {2, 25, 10, 35} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  oneup_metrics:reset([g,b,c1,d1,ref1]),
-  {0, 0, 999999999999, 0} = oneup_metrics:get_value([g,b,c1,d1,ref1]),
-  application:stop(oneup_metrics).
 
 
 
