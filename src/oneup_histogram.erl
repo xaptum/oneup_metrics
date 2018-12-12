@@ -78,7 +78,7 @@ header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~n",
     ["histogram", "", "samples", "min", "mean", "max"])).
 
-display(DisplayName, Domain, {Samples, Mean, Min, Max})->
+display(DisplayName, [Domain], {Samples, Mean, Min, Max})->
   lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
     ["histogram", lists:subtract(DisplayName, Domain),
       Samples, min(oneup:get(Min)), Mean, oneup:get(Max)])).
