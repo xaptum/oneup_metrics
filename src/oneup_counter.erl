@@ -60,8 +60,8 @@ update(CounterRef, Value) when is_integer(Value) ->
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["counter", "", "count"])).
 
-display(DisplayName, [Domain], CounterValue)->
-  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(DisplayName, Domain), CounterValue])).
+display(DisplayName, [Domain], CounterValue) when is_atom(DisplayName) ->
+  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(atom_to_list(DisplayName), Domain), CounterValue])).
 
 %%%===================================================================
 %%% gen_server API
