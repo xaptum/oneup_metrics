@@ -20,7 +20,8 @@
 %% API
 -export([
   start_link/1,
-  get_value/1,
+  get_value/3,
+  get_value/4,
   reset/1,
   reset/2,
   display/3,
@@ -204,16 +205,19 @@ add_nested_metric(Domain, Metrics, Metric, [Head | Tail], Type) when is_map(Metr
 
 
 
-get_value(Domain, MetricName) when is_atom(Domain) ->
-  get_value([Domain] ++ MetricName);
-get_value(Domain, MetricName) when is_list(Domain)->
-  get_value(Domain ++ MetricName).
+get_value(MetricType, MetricName, Domain, Values) when is_atom(Domain) ->
+  get_value(MetricType, [Domain] ++ MetricName, Values);
+get_value(MetricType, MetricName, Domain, Values) when is_list(Domain)->
+  get_value(MetricType, Domain ++ MetricName, Values).
 
-get_value(MetricName) when is_list(MetricName)->
-  get_value(metric_name_to_atom(MetricName));
-get_value(MetricName) when is_atom(MetricName)->
-  gen_server:call(MetricName, get).
-
+get_value(MetricType, MetricName, Values) when is_list(MetricName)->
+  get_value(MetricType, metric_name_to_atom(MetricName), Values);
+get_value(_MetricType, MetricName, Values) when is_atom(MetricName)->
+  case whereis(MetricName) of
+    undefined -> Values; %% use finalized and stored values
+    RunningPid when is_pid(RunningPid) ->
+      gen_server:call(MetricName, get) %% evaluate
+  end.
 
 reset(Domain, MetricName) when is_atom(Domain)->
   reset([Domain] ++ MetricName);
@@ -223,7 +227,10 @@ reset(Domain, MetricName) when is_list(Domain)->
 reset(MetricName) when is_list(MetricName)->
   reset(metric_name_to_atom(MetricName));
 reset(MetricName) when is_atom(MetricName)->
-  gen_server:call(MetricName, reset).
+  case whereis(MetricName) of
+    undefined -> lager:warn("~p is not an active metric. Can't reset finalized values", [MetricName]);
+    RunningPid when is_pid(RunningPid)-> gen_server:call(MetricName, reset)
+  end.
 
 display(MetricType, MetricName, Values)->
   display(MetricType, MetricName,[], Values).
@@ -290,7 +297,7 @@ get_metric_values(Metric)->
 
 get_metric_values(Metrics, [Metric]) ->
   case Metrics of
-    #{Metric := {_MetricType, MetricName, _CounterRef}} -> oneup_metrics:get_value(MetricName);
+    #{Metric := {MetricType, MetricName, Values}} -> oneup_metrics:get_value(MetricType, MetricName, Values);
     _-> {error, uninitialized}
   end;
 get_metric_values(Metrics, [Head | Tail])->
