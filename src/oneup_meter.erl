@@ -94,7 +94,10 @@ header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
 
-display(DisplayName, [Domain], [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])->
+display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
+  display(atom_to_list(DisplayName), Domain, CounterValue);
+display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])
+  when is_list(DisplayName), is_list(Domain)->
     lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20w~-20w~-20w~-20w~-20w~-20w~n",
       ["meter", lists:subtract(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])).
 
