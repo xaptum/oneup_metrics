@@ -156,6 +156,7 @@ handle_info({timeout, _TimerRef, tick},
       hour_rate = HourRate,
       day_rate = DayRate} = State) ->
   Count = oneup:set(CounterRef, 0),
+  erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
   {noreply, State#state{
     instant_rate = Count / ?INTERVAL,
     lifetime_total = LifetimeTotal + Count,

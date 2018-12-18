@@ -139,7 +139,7 @@ handle_info({timeout, _TimerRef, tick},
 
   NewPrevSamples = DecayedPrevSamples + DecayedNewSamples,
   NewPrevValue = avg(DecayedPrevValue + DecayedNewValue, NewPrevSamples),
-
+  erlang:start_timer(?INTERVAL_MILLIS, self(), tick),
   {noreply, State#state{prev_value = NewPrevValue, prev_samples = NewPrevSamples}}.
 
 terminate(_Reason, _State) ->
