@@ -86,7 +86,8 @@ handle_call(reset, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:set(CounterRef, 0), State};
 handle_call({display, Domain}, _From, #state{counter = CounterRef, display_name = DisplayName} = State) ->
   CounterValue =  oneup:get(CounterRef),
-  DisplayString = lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(DisplayName, Domain), CounterValue])),
+  DisplayString = lists:flatten(io_lib:format("~-15s~-50s~-20w~n",
+    ["counter", oneup_metrics:display_metric_name(DisplayName, Domain), CounterValue])),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->

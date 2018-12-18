@@ -82,7 +82,7 @@ display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
   display(atom_to_list(DisplayName), Domain, CounterValue);
 display(DisplayName, Domain, {Samples, Mean, Min, Max}) when is_list(DisplayName), is_list(Domain) ->
   lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
-    ["histogram", lists:subtract(DisplayName, Domain),
+    ["histogram", oneup_metrics:display_metric_name(DisplayName, Domain),
       Samples, min(Min), Mean, Max])).
 
 %%%===================================================================

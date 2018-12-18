@@ -99,7 +99,7 @@ display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
 display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])
   when is_list(DisplayName), is_list(Domain)->
     lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
-      ["meter", lists:subtract(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])).
+      ["meter", oneup_metrics:display_metric_name(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])).
 
 %%%===================================================================
 %%% gen_server callbacks

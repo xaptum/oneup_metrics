@@ -27,7 +27,8 @@
   display/3,
   display/4,
   get_sub_metrics/2,
-  evaluated_metrics/1]).
+  evaluated_metrics/1,
+  display_metric_name/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -335,3 +336,6 @@ evaluated_metrics(MetricsMap) when is_map(MetricsMap)->
 evaluated_metrics({Type, RegName, _Refs}) ->
   Value = gen_server:call(RegName, get),
   {Type, RegName, Value}.
+
+display_metric_name(DisplayName, Domain) ->
+  string:trim(lists:subtract(DisplayName, Domain), leading, ".").

@@ -69,7 +69,7 @@ header()->
 display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
   display(atom_to_list(DisplayName), Domain, CounterValue);
 display(DisplayName, Domain, CounterValue) when is_list(DisplayName), is_list(Domain)->
-  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["gauge", lists:subtract(DisplayName, Domain), CounterValue])).
+  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["gauge", oneup_metrics:display_metric_name(DisplayName, Domain), CounterValue])).
 
 %%%===================================================================
 %%% gen_server API
