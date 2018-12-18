@@ -114,12 +114,12 @@ handle_call(reset, _From, #state{value_aggr = ValueAggregateCounterRef, samples 
 handle_call({display, Domain}, _From, #state{
   prev_value = PrevValueAvg,   prev_samples = PrevSamples,
   value_aggr = CurrValueAggrRef,  samples = CurrSamples,
-  min = Min, max = Max,
+  min = MinRef, max = MaxRef,
   display_name = DisplayName} = State) ->
   Samples = PrevSamples + oneup:get(CurrSamples),
   Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
   Mean = avg(Values, Samples),
-  DisplayedHistogram = display(DisplayName, Domain, {Samples, Mean, Min, Max}),
+  DisplayedHistogram = display(DisplayName, Domain, {Samples, Mean, oneup:get(MinRef), oneup:get(MaxRef)}),
   {reply, DisplayedHistogram, State}.
 
 
