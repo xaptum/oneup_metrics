@@ -335,6 +335,7 @@ evaluated_metrics(MetricsMap) when is_map(MetricsMap)->
   maps:fold(Fun,#{},MetricsMap);
 evaluated_metrics({Type, RegName, _Refs}) ->
   Value = gen_server:call(RegName, get),
+  gen_server:stop(RegName),
   {Type, RegName, Value}.
 
 display_metric_name(DisplayName, Domain) ->
