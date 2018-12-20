@@ -51,12 +51,12 @@
   counter,
   start,
   lifetime_total = 0,
-  instant_rate = 0,
-  one_minute_rate = 0,
-  five_minute_rate = 0,
-  fifteen_minute_rate = 0,
-  hour_rate = 0,
-  day_rate = 0}).
+  instant_rate = 0.0,
+  one_minute_rate = 0.0,
+  five_minute_rate = 0.0,
+  fifteen_minute_rate = 0.0,
+  hour_rate = 0.0,
+  day_rate = 0.0}).
 
 
 
@@ -98,7 +98,7 @@ display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
   display(atom_to_list(DisplayName), Domain, CounterValue);
 display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])
   when is_list(DisplayName), is_list(Domain)->
-    lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
+    lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
       ["meter", oneup_metrics:display_metric_name(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])).
 
 %%%===================================================================
