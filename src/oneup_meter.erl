@@ -22,7 +22,8 @@
   update/1,
   update/2,
   header/0,
-  display/3]).
+  display/3,
+  oneup_max/2]).
 
 
 %% gen_server callbacks
@@ -120,7 +121,7 @@ handle_call(get, _From, #state{
   hour_rate = HourRate,
   day_rate = DayRate} = State) ->
   Counter = oneup:get(CounterRef),
-  Mean = LifetimeTotal / oneup_meter:max(oneup_metrics:current_second() - Start, 1),
+  Mean = LifetimeTotal / oneup_max(oneup_metrics:current_second() - Start, 1),
   Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
   {reply, Ret, State};
 handle_call({display, Domain}, _From, #state{counter = CounterRef,
@@ -182,8 +183,8 @@ code_change(_OldVsn, State, _Extra) ->
 %% But we liked more accuracy for the recent occurences, specifically 1-minute rate,
 %% hence the modification
 
-max(A, B) when A > B -> A;
-max(A, B) when A =< B -> B.
+oneup_max(A, B) when A > B -> A;
+oneup_max(A, B) when A =< B -> B.
 
 alpha(Minutes)->
   1 - math:exp(-math:pow(?INTERVAL,2) / ?SECONDS_PER_MINUTE / math:pow(Minutes,2)).
