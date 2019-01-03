@@ -120,7 +120,7 @@ handle_call(get, _From, #state{
   hour_rate = HourRate,
   day_rate = DayRate} = State) ->
   Counter = oneup:get(CounterRef),
-  Mean = LifetimeTotal / max(oneup_metrics:current_second() - Start, 1),
+  Mean = LifetimeTotal / oneup_meter:max(oneup_metrics:current_second() - Start, 1),
   Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
   {reply, Ret, State};
 handle_call({display, Domain}, _From, #state{counter = CounterRef,
