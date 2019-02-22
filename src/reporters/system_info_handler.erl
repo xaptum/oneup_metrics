@@ -46,8 +46,8 @@ show(?LARGE_MBOXES, [{mbox_threshold, MboxThreshold}] = State)->
     end end,
   RegNameInfo = fun(Pid) ->
     case process_info(Pid, registered_name) of
-      {registered_name, RegName} -> RegName;
-      _Unknown -> Pid
+      {registered_name, RegName} -> {Pid, RegName};
+      _Unknown -> {Pid, unregistered}
     end end,
   LargeMboxes = [io_lib:format("     ~p: ~p~n", [RegNameInfo(Pid), Info]) || Pid <- processes(), (Info = MboxSizeInfo(Pid)) > MboxThreshold],
   "\nLarge Mboxes:\n" ++ lists:flatten(LargeMboxes);
