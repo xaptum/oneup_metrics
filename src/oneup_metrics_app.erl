@@ -5,6 +5,8 @@
 
 -module('oneup_metrics_app').
 
+-define(FAVICON, 'favicon.ico'). %% WORKAROUND(?) FOR WEIRD COWBOY ERROR
+
 -behaviour(application).
 
 %% Application callbacks
