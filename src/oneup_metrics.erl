@@ -237,10 +237,12 @@ display(MetricType, MetricName, Values)->
   display(MetricType, MetricName,[], Values).
 
 display(MetricType, MetricName, Domain, Values) when is_atom(Domain) ->
+  lager:debug("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   display(MetricType, [Domain], MetricName, Values);
 display(MetricType, MetricName,  Domain, Values) when is_list(Domain), is_list(MetricName)->
   display(MetricType, metric_name_to_atom(Domain ++ MetricName), Domain, Values);
 display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
+  lager:debug("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   case whereis(MetricName) of
     undefined ->
       MetricType:display(MetricName, Domain, Values); %% use finalized and stored values
