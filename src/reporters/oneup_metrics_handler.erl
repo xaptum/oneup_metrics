@@ -44,6 +44,9 @@ process_request(#{path_info := PathBinList} = Req, [MetricsMap] = State) when is
   RespBody = apply_to_metrics(PathBinList, MetricsMap, fun oneup_metrics_handler:display_metrics/1),
   {RespBody, Req, State}.
 
+%% TODO this is workaround for this weirdness, need to figure out why this happens at all
+apply_to_metrics(<<"favicon.ico">>, _MetricsMap, _Fun)->
+  print_invalid_request(<<"favicon.ico">>);
 apply_to_metrics(undefined, MetricsMap, Fun)->
   Fun(MetricsMap);
 apply_to_metrics([], MetricsMap, Fun)->
