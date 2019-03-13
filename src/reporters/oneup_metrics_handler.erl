@@ -44,14 +44,15 @@ process_request(#{path_info := PathBinList} = Req, [MetricsMap] = State) when is
   RespBody = apply_to_metrics(PathBinList, MetricsMap, fun oneup_metrics_handler:display_metrics/1),
   {RespBody, Req, State}.
 
-%% TODO this is workaround for this weirdness, need to figure out why this happens at all
-apply_to_metrics(<<"favicon.ico">>, _MetricsMap, _Fun)->
-  print_invalid_request(<<"favicon.ico">>);
 apply_to_metrics(undefined, MetricsMap, Fun)->
   Fun(MetricsMap);
 apply_to_metrics([], MetricsMap, Fun)->
   Fun(MetricsMap);
 apply_to_metrics(PathBinList, MetricsMap, Fun)->
+%% TODO this is workaround for this weirdness, need to figure out why this happens at all
+    case lists:member(<<"favicon.ico">>, PathBinList) of
+      true -> print_invalid_request(PathBinList);
+      _False ->
     try [binary_to_existing_atom(P, utf8) || P <- PathBinList] of
       PathAtomList when is_list(PathAtomList) ->
         case oneup_metrics:get_sub_metrics(MetricsMap, PathAtomList) of
@@ -63,6 +64,7 @@ apply_to_metrics(PathBinList, MetricsMap, Fun)->
       Error:Error ->
         lager:error("~p:~p when PathBinList is ~p", [PathBinList]),
         print_invalid_request(Error)
+    end
     end.
 
 print_invalid_request(Arg)->
