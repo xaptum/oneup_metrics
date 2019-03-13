@@ -245,7 +245,7 @@ display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
   lager:debug("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   case whereis(MetricName) of
     undefined ->
-      lager:debug("~p is no longer a running process, displaying stored values", [MetricName, Domain]),
+      lager:debug("~p is no longer a running process, displaying stored values", [MetricName]),
       case Values of
         CalculatedValues when is_list(CalculatedValues) ->
           MetricType:display(MetricName, Domain, Values); %% use finalized and stored values
