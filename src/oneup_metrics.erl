@@ -245,8 +245,16 @@ display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
   lager:debug("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   case whereis(MetricName) of
     undefined ->
-      MetricType:display(MetricName, Domain, Values); %% use finalized and stored values
+      lager:debug("~p is no longer a running process, displaying stored values", [MetricName, Domain]),
+      case Values of
+        CalculatedValues when is_list(CalculatedValues) ->
+          MetricType:display(MetricName, Domain, Values); %% use finalized and stored values
+        NonCalculatedValues when is_reference(NonCalculatedValues) ->
+          lager:warning("~p:~p process died before being finalized!", [MetricType, MetricName]),
+          MetricType:display(MetricName, Domain, Values)
+      end;
     RunningPid when is_pid(RunningPid) ->
+      lager:debug("retreiving live values from ~p in ~p", [MetricName, Domain]),
       gen_server:call(MetricName, {display, Domain}) %% evaluate
   end.
 

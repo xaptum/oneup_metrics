@@ -95,6 +95,10 @@ header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
 
+display(DisplayName, Domain, CounterRef) when is_reference(CounterRef) ->
+  CounterVal = oneup:get(CounterRef),
+  lists:flatten(io_lib:format("~-15s~-50s~-20w ERROR~n",
+    ["meter", oneup_metrics:display_metric_name(DisplayName, Domain), CounterVal]));
 display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
   display(atom_to_list(DisplayName), Domain, CounterValue);
 display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])
