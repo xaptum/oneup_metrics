@@ -80,6 +80,13 @@ header()->
 
 display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
   display(atom_to_list(DisplayName), Domain, CounterValue);
+display(DisplayName, Domain, {SamplesRef, MeanRef, MinRef, MaxRef})
+    when is_reference(SamplesRef), is_reference(MeanRef), is_reference(MinRef), is_reference(MaxRef) ->
+  Samples = oneup:get(SamplesRef),
+  Mean = oneup:get(MeanRef),
+  Min = oneup:get(MinRef),
+  Max = oneup:get(MaxRef),
+  display(DisplayName, Domain, {Samples, Mean, Min, Max});
 display(DisplayName, Domain, {Samples, Mean, Min, Max}) when is_list(DisplayName), is_list(Domain) ->
   lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
     ["histogram", oneup_metrics:display_metric_name(DisplayName, Domain),
