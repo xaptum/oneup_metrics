@@ -237,15 +237,15 @@ display(MetricType, MetricName, Values)->
   display(MetricType, MetricName,[], Values).
 
 display(MetricType, MetricName, Domain, Values) when is_atom(Domain) ->
-  lager:debug("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
+  lager:trace("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   display(MetricType, [Domain], MetricName, Values);
 display(MetricType, MetricName,  Domain, Values) when is_list(Domain), is_list(MetricName)->
   display(MetricType, metric_name_to_atom(Domain ++ MetricName), Domain, Values);
 display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
-  lager:debug("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
+  lager:trace("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   case whereis(MetricName) of
     undefined ->
-      lager:debug("~p is no longer a running process, displaying stored values", [MetricName]),
+      lager:trace("~p is no longer a running process, displaying stored values", [MetricName]),
       case Values of
         CalculatedValues when is_list(CalculatedValues) ->
           MetricType:display(MetricName, Domain, Values); %% use finalized and stored values
@@ -254,7 +254,7 @@ display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
           MetricType:display(MetricName, Domain, Values)
       end;
     RunningPid when is_pid(RunningPid) ->
-      lager:debug("retreiving live values from ~p in ~p", [MetricName, Domain]),
+      lager:trace("retreiving live values from ~p in ~p", [MetricName, Domain]),
       gen_server:call(MetricName, {display, Domain}) %% evaluate
   end.
 
