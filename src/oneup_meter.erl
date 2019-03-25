@@ -114,7 +114,7 @@ do_display(DisplayName, Domain, CounterRef, DisplayFormat) when is_reference(Cou
   CounterVal = oneup:get(CounterRef),
   lists:flatten(io_lib:format(DisplayFormat,
     ["meter (ERR)", oneup_metrics:display_metric_name(DisplayName, Domain), CounterVal, 0,0,0,0,0,0,0]));
-do_display(DisplayName, Domain, {Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate}, DisplayFormat)
+do_display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate], DisplayFormat)
   when is_list(DisplayName), is_list(Domain)->
     lists:flatten(io_lib:format(DisplayFormat,
       ["meter", oneup_metrics:display_metric_name(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])).
@@ -166,7 +166,7 @@ do_display_running(Domain,  #state{counter = CounterRef,
     Duration when Duration =:= 0 -> 0
   end,
   DisplayMeterValues = ?MODULE:DisplayMethod(DisplayName, Domain,
-    {Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate}),
+    [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate]),
   {reply, DisplayMeterValues, State}.
 
 handle_cast(_Request, State) ->
