@@ -233,15 +233,25 @@ reset(MetricName) when is_atom(MetricName)->
     RunningPid when is_pid(RunningPid)-> gen_server:call(MetricName, reset)
   end.
 
-display(MetricType, MetricName, Values)->
-  display(MetricType, MetricName,[], Values).
+html_display(MetricType, MetricName, Values)->
+  display(MetricType, MetricName, [], Values, html_display).
+html_display(MetricType, MetricName, Domain, Values)->
+  display(MetricType, MetricName, Domain, Values, html_display).
 
-display(MetricType, MetricName, Domain, Values) when is_atom(Domain) ->
+
+display(MetricType, MetricName, Values)->
+  display(MetricType, MetricName, [], Values, display).
+
+display(MetricType, MetricName, Domain, Values)->
+  display(MetricType, MetricName, Domain, Values, display).
+
+
+display(MetricType, MetricName, Domain, Values, DisplayMethod) when is_atom(Domain) ->
   lager:trace("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
-  display(MetricType, MetricName, [Domain], Values);
-display(MetricType, MetricName,  Domain, Values) when is_list(Domain), is_list(MetricName)->
-  display(MetricType, metric_name_to_atom(Domain ++ MetricName), Domain, Values);
-display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
+  display(MetricType, MetricName, [Domain], Values, DisplayMethod);
+display(MetricType, MetricName,  Domain, Values, DisplayMethod) when is_list(Domain), is_list(MetricName)->
+  display(MetricType, metric_name_to_atom(Domain ++ MetricName), Domain, Values, DisplayMethod);
+display(MetricType, MetricName, Domain, Values, DisplayMethod) when is_atom(MetricName)->
   lager:trace("displaying ~p for ~p in ~p with ~p", [MetricType, MetricName, Domain, Values]),
   case whereis(MetricName) of
     undefined ->
@@ -249,13 +259,13 @@ display(MetricType, MetricName, Domain, Values) when is_atom(MetricName)->
       case Values of
         NonCalculatedValues when is_reference(NonCalculatedValues) ->
           lager:warning("~p:~p process died before being finalized!", [MetricType, MetricName]),
-          MetricType:display(MetricName, Domain, Values);
+          MetricType:DisplayMethod(MetricName, Domain, Values);
         _CalculatedValues ->
-          MetricType:display(MetricName, Domain, Values) %% use finalized and stored values
+          MetricType:DisplayMethod(MetricName, Domain, Values) %% use finalized and stored values
       end;
     RunningPid when is_pid(RunningPid) ->
       lager:trace("retreiving live values from ~p in ~p", [MetricName, Domain]),
-      gen_server:call(MetricName, {display, Domain}) %% evaluate
+      gen_server:call(MetricName, {DisplayMethod, Domain}) %% evaluate
   end.
 
 update({Type, CounterRef}) when is_atom(Type)->

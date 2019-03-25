@@ -21,7 +21,10 @@
   init_metric/2,
   update/1,
   update/2,
-  header/0]).
+  header/0,
+  display/3,
+  html_header/0,
+  html_display/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -32,6 +35,9 @@
   code_change/3]).
 
 -define(SERVER, ?MODULE).
+
+-define(DISPLAY_FORMAT, "~-15s~-50s~-20w~n").
+-define(HTML_DISPLAY_FORMAT, "<tr><td><b>~-15s</b></td><td><b>~-50s</b></td><td>~-20w</td></tr>").
 
 -record(state, {gauge, display_name}).
 
@@ -63,16 +69,25 @@ update(CounterRef)->
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:set(CounterRef, Value).
 
+html_header()->
+  "<tr><td><b>gauge</b></td><td></td><td>value</td></tr>".
+
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["gauge", "", "value"])).
 
-display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
-  display(atom_to_list(DisplayName), Domain, CounterValue);
-display(DisplayName, Domain, CounterRef) when is_reference(CounterRef) ->
+html_display(DisplayName, Domain, CounterValue)->
+  do_display(DisplayName, Domain, CounterValue, ?HTML_DISPLAY_FORMAT).
+
+display(DisplayName, Domain, CounterValue)->
+  do_display(DisplayName, Domain, CounterValue, ?DISPLAY_FORMAT).
+
+do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_atom(DisplayName) ->
+  do_display(atom_to_list(DisplayName), Domain, CounterValue, DisplayFormat);
+do_display(DisplayName, Domain, CounterRef, DisplayFormat) when is_reference(CounterRef) ->
   CounterVal = oneup:get(CounterRef),
-  display(DisplayName, Domain, CounterVal);
-display(DisplayName, Domain, CounterValue) when is_list(DisplayName), is_list(Domain)->
-  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["gauge", oneup_metrics:display_metric_name(DisplayName, Domain), CounterValue])).
+  do_display(DisplayName, Domain, CounterVal, DisplayFormat);
+do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_list(DisplayName), is_list(Domain)->
+  lists:flatten(io_lib:format(DisplayFormat, ["gauge", oneup_metrics:display_metric_name(DisplayName, Domain), CounterValue])).
 
 %%%===================================================================
 %%% gen_server API
@@ -92,9 +107,13 @@ handle_call(get, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:get(GaugeRef), State};
 handle_call(reset, _From, #state{gauge = GaugeRef} = State) ->
   {reply, oneup:set(GaugeRef, 0), State};
-handle_call({display, Domain}, _From, #state{gauge = GaugeRef, display_name = DisplayName} = State) ->
-  CounterValue = oneup:get(GaugeRef),
-  DisplayString = display(DisplayName, Domain, CounterValue),
+handle_call({display, Domain}, _From, State) ->
+  do_display_running(Domain, State, display);
+handle_call({html_display, Domain}, _From, State) ->
+  do_display_running(Domain, State, html_display).
+
+do_display_running(Domain, #state{gauge = GaugeRef, display_name = DisplayName} = State, DisplayMethod)->
+  DisplayString = ?MODULE:DisplayMethod(DisplayName, Domain, GaugeRef),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->

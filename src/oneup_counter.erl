@@ -23,7 +23,9 @@
   update/1,
   update/2,
   header/0,
-  display/3]).
+  html_header/0,
+  display/3,
+  html_display/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -34,6 +36,9 @@
   code_change/3]).
 
 -define(SERVER, ?MODULE).
+
+-define(DISPLAY_FORMAT, "~-15s~-50s~-20w~n").
+-define(HTML_DISPLAY_FORMAT, "<tr><td><b>~-15s</b></td><td><b>~-50s</td><td>~-20w</td></tr>").
 
 -record(state, {counter, display_name}).
 
@@ -57,16 +62,26 @@ update(CounterRef)->
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
+html_header()->
+  lists:flatten(io_lib:format("<tr><td><b>~-15s</b></td>~-50s<td></td><td>~-20s</td></tr>", ["counter", "", "count"])).
+
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["counter", "", "count"])).
 
-display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
-  display(atom_to_list(DisplayName), Domain, CounterValue);
-display(DisplayName, Domain, CounterRef) when is_reference(CounterRef) ->
+html_display(DisplayName, Domain, CounterValue)->
+  do_display(DisplayName, Domain, CounterValue, ?HTML_DISPLAY_FORMAT).
+
+display(DisplayName, Domain, CounterValue) ->
+  do_display(DisplayName, Domain, CounterValue, ?DISPLAY_FORMAT).
+
+
+do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_atom(DisplayName) ->
+  do_display(atom_to_list(DisplayName), Domain, CounterValue, DisplayFormat);
+do_display(DisplayName, Domain, CounterRef, DisplayFormat) when is_reference(CounterRef) ->
   CounterVal = oneup:get(CounterRef),
-  display(DisplayName, Domain, CounterVal);
-display(DisplayName, Domain, CounterValue) when is_list(DisplayName), is_list(Domain) ->
-  lists:flatten(io_lib:format("~-15s~-50s~-20w~n", ["counter", lists:subtract(DisplayName, Domain), CounterValue])).
+  do_display(DisplayName, Domain, CounterVal, DisplayFormat);
+do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_list(DisplayName), is_list(Domain) ->
+  lists:flatten(io_lib:format(DisplayFormat, ["counter", lists:subtract(DisplayName, Domain), CounterValue])).
 
 %%%===================================================================
 %%% gen_server API
@@ -87,10 +102,13 @@ handle_call(get, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:get(CounterRef), State};
 handle_call(reset, _From, #state{counter = CounterRef} = State) ->
   {reply, oneup:set(CounterRef, 0), State};
-handle_call({display, Domain}, _From, #state{counter = CounterRef, display_name = DisplayName} = State) ->
-  CounterValue =  oneup:get(CounterRef),
-  DisplayString = lists:flatten(io_lib:format("~-15s~-50s~-20w~n",
-    ["counter", oneup_metrics:display_metric_name(DisplayName, Domain), CounterValue])),
+handle_call({html_display, Domain}, _From, State) ->
+  do_display_running(Domain, State, html_display);
+handle_call({display, Domain}, _From, State) ->
+  do_display_running(Domain, State, display).
+
+do_display_running(Domain, #state{counter = CounterRef, display_name = DisplayName} = State, DisplayMethod)->
+  DisplayString = ?MODULE:DisplayMethod(DisplayName, Domain, CounterRef),
   {reply, DisplayString, State}.
 
 handle_cast(_Request, State) ->

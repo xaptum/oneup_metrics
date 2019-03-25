@@ -26,7 +26,9 @@
   update/1,
   update/2,
   header/0,
-  display/3]).
+  html_header/0,
+  display/3,
+  html_display/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -37,6 +39,10 @@
   code_change/3]).
 
 -define(SERVER, ?MODULE).
+
+-define(HTML_DISPLAY_FORMAT, "<tr><td><b>~-15s</b></td><td><b>~-50s</b></td><td>~-20w</td><td>~-20w</td><td>~-20w</td><td>~-20w</td><td>").
+
+-define(DISPLAY_FORMAT, "~-15s~-50s~-20w~-20w~-20w~-20w~n").
 
 -record(state, {display_name, prev_value = 0, prev_samples = 0, value_aggr, samples, min, max}).
 
@@ -74,21 +80,31 @@ update([ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounter
   oneup:set_min(MinCounterRef, Value),
   oneup:set_max(MaxCounterRef, Value).
 
+html_header()->
+  lists:flatten(io_lib:format("<tr><td><b>~-15s</b></td><td></td><td>~-50s</td><td>~-20s</td><td>~-20s</td><td>~-20s</td><td>~-20s</td></tr>",
+    ["histogram", "", "samples", "mean", "min", "max"])).
+
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~n",
-    ["histogram", "", "samples", "min", "mean", "max"])).
+    ["histogram", "", "samples", "mean", "min", "max"])).
 
-display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
-  display(atom_to_list(DisplayName), Domain, CounterValue);
-display(DisplayName, Domain, {SamplesRef, MeanRef, MinRef, MaxRef})
+html_display(DisplayName, Domain, CounterValue) ->
+  do_display(DisplayName, Domain, CounterValue, ?HTML_DISPLAY_FORMAT).
+
+display(DisplayName, Domain, CounterValue) ->
+  do_display(DisplayName, Domain, CounterValue, ?DISPLAY_FORMAT).
+
+do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_atom(DisplayName) ->
+  do_display(atom_to_list(DisplayName), Domain, CounterValue, DisplayFormat);
+do_display(DisplayName, Domain, {SamplesRef, MeanRef, MinRef, MaxRef}, DisplayFormat)
     when is_reference(SamplesRef), is_reference(MeanRef), is_reference(MinRef), is_reference(MaxRef) ->
   Samples = oneup:get(SamplesRef),
   Mean = oneup:get(MeanRef),
   Min = oneup:get(MinRef),
   Max = oneup:get(MaxRef),
-  display(DisplayName, Domain, {Samples, Mean, Min, Max});
-display(DisplayName, Domain, {Samples, Mean, Min, Max}) when is_list(DisplayName), is_list(Domain) ->
-  lists:flatten(io_lib:format("~-15s~-50s~-20w~-20w~-20w~-20w~n",
+  do_display(DisplayName, Domain, {Samples, Mean, Min, Max}, DisplayFormat);
+do_display(DisplayName, Domain, {Samples, Mean, Min, Max}, DisplayFormat) when is_list(DisplayName), is_list(Domain) ->
+  lists:flatten(io_lib:format(DisplayFormat,
     ["histogram", oneup_metrics:display_metric_name(DisplayName, Domain),
       Samples, min(Min), Mean, Max])).
 
@@ -118,15 +134,21 @@ handle_call(reset, _From, #state{value_aggr = ValueAggregateCounterRef, samples 
   oneup:set(MinRef, ?UNDEFINED_MIN),
   oneup:set(MaxRef, 0),
   {reply, ok, State#state{prev_value = 0, prev_samples = 0}};
-handle_call({display, Domain}, _From, #state{
+
+handle_call({display, Domain}, _From, State)->
+  do_display_running(Domain, State, display);
+handle_call({html_display, Domain}, _From, State)->
+  do_display_running(Domain, State, html_display).
+
+do_display_running(Domain, #state{
   prev_value = PrevValueAvg,   prev_samples = PrevSamples,
   value_aggr = CurrValueAggrRef,  samples = CurrSamples,
   min = MinRef, max = MaxRef,
-  display_name = DisplayName} = State) ->
+  display_name = DisplayName} = State, DisplayMethod) ->
   Samples = PrevSamples + oneup:get(CurrSamples),
   Values = PrevValueAvg + oneup:get(CurrValueAggrRef),
   Mean = avg(Values, Samples),
-  DisplayedHistogram = display(DisplayName, Domain, {Samples, Mean, oneup:get(MinRef), oneup:get(MaxRef)}),
+  DisplayedHistogram = ?MODULE:DisplayMethod(DisplayName, Domain, {Samples, Mean, oneup:get(MinRef), oneup:get(MaxRef)}),
   {reply, DisplayedHistogram, State}.
 
 

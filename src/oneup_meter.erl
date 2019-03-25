@@ -22,7 +22,9 @@
   update/1,
   update/2,
   header/0,
+  html_header/0,
   display/3,
+  html_display/3,
   oneup_max/2]).
 
 
@@ -35,6 +37,9 @@
   code_change/3]).
 
 -define(SERVER, ?MODULE).
+
+-define(DISPLAY_FORMAT,"~-15s~-50s~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n").
+-define(HTML_DISPLAY_FORMAT, "<tr><td><b>~-15s</b></td><td><b>~-50s</b></td><td>~-20w</td><td>~-20.4f</td><td>~-20.4f</td><td>~-20.4f</td><td>~-20.4f</td><td>~-20.4f</td><td>~-20.4f</td><td>~-20.4f</td></tr>").
 
 -define(INTERVAL, 5).
 -define(SECONDS_PER_MINUTE, 60.0).
@@ -91,19 +96,27 @@ update(CounterRef)->
 update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
+html_header()->
+  "<tr><td><b>meter</b></td><td> </td><td>count</td><td>mean</td><td>cur_rate</td><td>1m_rate</td><td>5m_rate</td><td>15m_rate</td><td>1h_rate</td><td>day_rate<</td></tr>".
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
 
-display(DisplayName, Domain, CounterValue) when is_atom(DisplayName) ->
-  display(atom_to_list(DisplayName), Domain, CounterValue);
-display(DisplayName, Domain, CounterRef) when is_reference(CounterRef) ->
+html_display(DisplayName, Domain, CounterValue) ->
+  do_display(DisplayName, Domain, CounterValue, ?HTML_DISPLAY_FORMAT).
+
+display(DisplayName, Domain, CounterValue) ->
+  do_display(DisplayName, Domain, CounterValue, ?DISPLAY_FORMAT).
+
+do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_atom(DisplayName) ->
+  do_display(atom_to_list(DisplayName), Domain, CounterValue, DisplayFormat);
+do_display(DisplayName, Domain, CounterRef, DisplayFormat) when is_reference(CounterRef) ->
   CounterVal = oneup:get(CounterRef),
-  lists:flatten(io_lib:format("~-15s~-50s~-20w ERROR~n",
-    ["meter", oneup_metrics:display_metric_name(DisplayName, Domain), CounterVal]));
-display(DisplayName, Domain, [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])
+  lists:flatten(io_lib:format(DisplayFormat,
+    ["meter (ERR)", oneup_metrics:display_metric_name(DisplayName, Domain), CounterVal, 0,0,0,0,0,0,0]));
+do_display(DisplayName, Domain, {Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate}, DisplayFormat)
   when is_list(DisplayName), is_list(Domain)->
-    lists:flatten(io_lib:format("~-15s~-50s~-20w~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~-20.4f~n",
+    lists:flatten(io_lib:format(DisplayFormat,
       ["meter", oneup_metrics:display_metric_name(DisplayName, Domain), Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate])).
 
 %%%===================================================================
@@ -128,7 +141,15 @@ handle_call(get, _From, #state{
   Mean = LifetimeTotal / oneup_max(oneup_metrics:current_second() - Start, 1),
   Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
   {reply, Ret, State};
-handle_call({display, Domain}, _From, #state{counter = CounterRef,
+
+handle_call({display, Domain}, _From, State)->
+  do_display_running(Domain, State, display);
+
+handle_call({html_display, Domain}, _From, State)->
+  do_display_running(Domain, State, html_display).
+
+
+do_display_running(Domain,  #state{counter = CounterRef,
                                     display_name = DisplayName,
                                     start = Start,
                                     lifetime_total = LifetimeTotal,
@@ -137,15 +158,15 @@ handle_call({display, Domain}, _From, #state{counter = CounterRef,
                                     five_minute_rate = FiveMinRate,
                                     fifteen_minute_rate = FifteenMinRate,
                                     hour_rate = HourRate,
-                                    day_rate = DayRate} = State) ->
+                                    day_rate = DayRate} = State, DisplayMethod) ->
   Counter = oneup:get(CounterRef),
   Mean =
   case (oneup_metrics:current_second() - Start) of
     Duration when Duration =/= 0 -> LifetimeTotal / Duration;
     Duration when Duration =:= 0 -> 0
   end,
-  DisplayMeterValues = display(DisplayName, Domain,
-    [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate]),
+  DisplayMeterValues = ?MODULE:DisplayMethod(DisplayName, Domain,
+    {Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate}),
   {reply, DisplayMeterValues, State}.
 
 handle_cast(_Request, State) ->
