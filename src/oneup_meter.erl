@@ -97,7 +97,7 @@ update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
 html_header()->
-  "<tr><td><b>meter</b></td><td> </td><td>count</td><td>mean</td><td>cur_rate</td><td>1m_rate</td><td>5m_rate</td><td>15m_rate</td><td>1h_rate</td><td>day_rate<</td></tr>".
+  "<tr><td><b>meter</b></td><td> </td><td>count</td><td>mean</td><td>cur_rate</td><td>1m_rate</td><td>5m_rate</td><td>15m_rate</td><td>1h_rate</td><td>day_rate</td></tr>".
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
