@@ -81,7 +81,7 @@ do_display(DisplayName, Domain, CounterRef, DisplayFormat) when is_reference(Cou
   CounterVal = oneup:get(CounterRef),
   do_display(DisplayName, Domain, CounterVal, DisplayFormat);
 do_display(DisplayName, Domain, CounterValue, DisplayFormat) when is_list(DisplayName), is_list(Domain) ->
-  lists:flatten(io_lib:format(DisplayFormat, ["counter", lists:subtract(DisplayName, Domain), CounterValue])).
+  lists:flatten(io_lib:format(DisplayFormat, ["counter", oneup_metrics:display_metric_name(DisplayName, Domain), CounterValue])).
 
 %%%===================================================================
 %%% gen_server API
