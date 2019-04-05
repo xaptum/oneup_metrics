@@ -106,7 +106,7 @@ do_display(DisplayName, Domain, {SamplesRef, MeanRef, MinRef, MaxRef}, DisplayFo
 do_display(DisplayName, Domain, {Samples, Mean, Min, Max}, DisplayFormat) when is_list(DisplayName), is_list(Domain) ->
   lists:flatten(io_lib:format(DisplayFormat,
     ["histogram", oneup_metrics:display_metric_name(DisplayName, Domain),
-      Samples, min(Min), Mean, Max])).
+      Samples, Mean, min(Min), Max])).
 
 %%%===================================================================
 %%% gen_server API
