@@ -97,7 +97,7 @@ update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
 html_header()->
-  "<tr><td><b>meter</b></td><td> </td><td>count</td><td>mean</td><td>cur_rate</td><td>1m_rate</td><td>5m_rate</td><td>15m_rate</td><td>1h_rate</td><td>day_rate</td></tr>".
+  "<tr><th><b>meter</b></th><th> </th><th>count</th><th>mean</th><th>cur_rate</th><th>1m_rate</th><th>5m_rate</th><th>15m_rate</th><th>1h_rate</th><th>day_rate</th></tr>".
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~-20s~n",
     ["meter", "", "count", "mean", "cur_rate", "1m_rate", "5m_rate", "15m_rate", "1h_rate", "day_rate"])).
@@ -139,6 +139,7 @@ handle_call(get, _From, #state{
   day_rate = DayRate} = State) ->
   Counter = oneup:get(CounterRef),
   Mean = LifetimeTotal / oneup_max(oneup_metrics:current_second() - Start, 1),
+  [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate] =
   Ret = [Counter, Mean, InstantRate, OneMinRate, FiveMinRate, FifteenMinRate, HourRate, DayRate],
   {reply, Ret, State};
 

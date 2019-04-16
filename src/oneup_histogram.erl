@@ -81,7 +81,7 @@ update([ValueAggregateCounterRef, OccurenceCounterRef, MinCounterRef, MaxCounter
   oneup:set_max(MaxCounterRef, Value).
 
 html_header()->
-  lists:flatten(io_lib:format("<tr><td><b>~-15s</b></td><td>~-50s</td><td>~-20s</td><td>~-20s</td><td>~-20s</td><td>~-20s</td></tr>",
+  lists:flatten(io_lib:format("<tr><th>~-15s</th><th>~-50s</th><th>~-20s</th><th>~-20s</th><th>~-20s</th><th>~-20s</th></tr>",
     ["histogram", "", "samples", "mean", "min", "max"])).
 
 header()->

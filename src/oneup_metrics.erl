@@ -215,7 +215,8 @@ get_value(MetricType, MetricName, Values) when is_list(MetricName)->
   get_value(MetricType, metric_name_to_atom(MetricName), Values);
 get_value(_MetricType, MetricName, Values) when is_atom(MetricName)->
   case whereis(MetricName) of
-    undefined -> Values; %% use finalized and stored values
+    undefined ->
+      Values; %% use finalized and stored values
     RunningPid when is_pid(RunningPid) ->
       gen_server:call(MetricName, get) %% evaluate
   end.

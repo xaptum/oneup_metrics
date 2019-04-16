@@ -70,7 +70,7 @@ update(CounterRef, Value) when is_integer(Value) ->
   oneup:set(CounterRef, Value).
 
 html_header()->
-  "<tr><td><b>gauge</b></td><td></td><td>value</td></tr>".
+  "<tr><th>gauge</th><th></th><th>value</th></tr>".
 
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["gauge", "", "value"])).

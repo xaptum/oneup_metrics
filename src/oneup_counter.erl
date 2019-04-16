@@ -63,7 +63,7 @@ update(CounterRef, Value) when is_integer(Value) ->
   oneup:inc2(CounterRef, Value).
 
 html_header()->
-  lists:flatten(io_lib:format("<tr><td><b>~-15s</b></td>~-50s<td></td><td>~-20s</td></tr>", ["counter", "", "count"])).
+  lists:flatten(io_lib:format("<tr><th><b>~-15s</b></th>~-50s<th></th><th>~-20s</th></tr>", ["counter", "", "count"])).
 
 header()->
   lists:flatten(io_lib:format("~-15s~-50s~-20s~n", ["counter", "", "count"])).
